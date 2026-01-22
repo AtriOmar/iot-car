@@ -76,11 +76,12 @@ export type RateLimits = {
 export type CarMoveAction = "forward" | "backward" | "left" | "right" | "stop";
 export type CarToggleAction = "on" | "off";
 export type CarLedId = 1 | 2;
+export type CarPlayAction = "pirates" | "got" | "squid" | "stop";
 
 export type CarMoveCommand = {
   type: "move";
   action: CarMoveAction;
-  speed?: number; // 0-255, defaults to 200
+  speed?: number; // 120 (slow), 180 (medium), 255 (fast), defaults to 120
   duration?: number; // milliseconds, null = indefinite until stop
 };
 
@@ -96,7 +97,16 @@ export type CarLedCommand = {
   action: CarToggleAction;
 };
 
-export type CarCommand = CarMoveCommand | CarBeepCommand | CarLedCommand;
+export type CarPlayCommand = {
+  type: "play";
+  action: CarPlayAction; // "pirates" for Pirates of the Caribbean, "stop" to stop melody
+};
+
+export type CarCommand =
+  | CarMoveCommand
+  | CarBeepCommand
+  | CarLedCommand
+  | CarPlayCommand;
 
 export type CarCommandSequence = {
   commands: CarCommand[];

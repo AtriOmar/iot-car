@@ -4,6 +4,7 @@
  * - DC Motors via L298N motor driver
  * - Two LEDs
  * - Beeper/Buzzer
+ * - Melody playback (Pirates of the Caribbean, etc.)
  *
  * Required Libraries:
  * - WiFi (built-in for ESP32)
@@ -11,9 +12,13 @@
  * - ArduinoJson by Benoit Blanchon (install via Library Manager)
  */
 
+// Beeper Pin
+const int BEEPER_PIN = 15;
+
 #include <WiFi.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
+#include "melodies.h"
 
 // ==================== CONFIGURATION ====================
 // WiFi Configuration
@@ -40,9 +45,6 @@ const int MOTOR_ENB = 25; // PWM speed control for Motor B (left motor)
 // LED Pins
 const int LED1_PIN = 2; // LED 1 (often built-in LED on GPIO2)
 const int LED2_PIN = 4; // LED 2
-
-// Beeper Pin
-const int BEEPER_PIN = 15;
 
 // ==================== PWM CONFIGURATION ====================
 const int PWM_FREQ = 5000;    // PWM frequency in Hz
@@ -104,6 +106,7 @@ void setLED(int led, bool state);
 void setBeeper(bool state);
 void enqueueCommand(QueuedCommand cmd);
 bool dequeueCommand(QueuedCommand &cmd);
+void playSong(const char *songName);
 
 // ==================== SETUP ====================
 void setup()
@@ -170,6 +173,9 @@ void loop()
       processCommandQueue();
     }
   }
+
+  // Update melody playback (non-blocking)
+  updateMelody();
 
   // Reconnect if disconnected
   if (!isConnected && (currentTime - lastReconnectAttempt > RECONNECT_INTERVAL))
@@ -474,6 +480,12 @@ void processCommandQueue()
       setLED(cmd.led, cmd.action == "on");
       // Continue to next command (LEDs are non-blocking)
     }
+    else if (cmd.type == "play")
+    {
+      // Play a melody
+      playSong(cmd.action.c_str());
+      // Continue to next command (melody plays in background)
+    }
   }
 
   Serial.println("Command queue empty");
@@ -579,5 +591,45 @@ void setLED(int led, bool state)
 void setBeeper(bool state)
 {
   Serial.printf("Beeper: %s\n", state ? "ON" : "OFF");
+  // Stop any playing melody when beeper is controlled directly
+  if (melodyPlaying)
+  {
+    stopMelody();
+  }
   digitalWrite(BEEPER_PIN, state ? HIGH : LOW);
+}
+
+// ==================== MELODY CONTROL ====================
+void playSong(const char *songName)
+{
+  Serial.printf("Playing song: %s\n", songName);
+
+  // Stop beeper if active
+  if (commandState.beepActive)
+  {
+    setBeeper(false);
+    commandState.beepActive = false;
+    commandState.beepEndTime = 0;
+  }
+
+  if (strcmp(songName, "pirates") == 0 || strcmp(songName, "pirates_of_caribbean") == 0)
+  {
+    startMelody(SONG_PIRATES);
+  }
+  else if (strcmp(songName, "got") == 0 || strcmp(songName, "gameofthrones") == 0 || strcmp(songName, "game_of_thrones") == 0)
+  {
+    startMelody(SONG_GOT);
+  }
+  else if (strcmp(songName, "squid") == 0 || strcmp(songName, "squidgame") == 0 || strcmp(songName, "squid_game") == 0)
+  {
+    startMelody(SONG_SQUID);
+  }
+  else if (strcmp(songName, "stop") == 0)
+  {
+    stopMelody();
+  }
+  else
+  {
+    Serial.printf("Unknown song: %s\n", songName);
+  }
 }
