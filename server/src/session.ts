@@ -315,15 +315,10 @@ export class RTSession {
         [REALTIME_SERVER_EVENTS.InputAudioBufferCommitted]: (event) => {
           if (event.transcript) {
             this.send({ type: "transcription", text: event.transcript });
-            this.logger.debug(
-              { transcriptionLength: event.transcript.length },
-              "✅ Input audio processed successfully",
-            );
           }
         },
 
-        [REALTIME_SERVER_EVENTS.InputAudioBufferCleared]: () =>
-          this.logger.debug("✅ Input audio buffer cleared"),
+        [REALTIME_SERVER_EVENTS.InputAudioBufferCleared]: () => {},
 
         [REALTIME_SERVER_EVENTS.ResponseAudioDelta]: (event) => {
           if (event.delta) {
@@ -331,12 +326,8 @@ export class RTSession {
           }
         },
 
-        [REALTIME_SERVER_EVENTS.ResponseAudioDone]: (event) => {
+        [REALTIME_SERVER_EVENTS.ResponseAudioDone]: () => {
           this.updateLatencyMetrics();
-          this.logger.debug(
-            { item_id: event.item_id },
-            "✅ Audio response completed",
-          );
         },
 
         [REALTIME_SERVER_EVENTS.ResponseAudioTranscriptDelta]: (event) => {
@@ -355,8 +346,7 @@ export class RTSession {
           this.send({ type: "control", action: "text_done", id: contentId });
         },
 
-        [REALTIME_SERVER_EVENTS.ResponseContentPartAdded]: (event) =>
-          this.logger.debug({ item_id: event.item_id }, "Content part added"),
+        [REALTIME_SERVER_EVENTS.ResponseContentPartAdded]: () => {},
 
         [REALTIME_SERVER_EVENTS.ResponseTextDelta]: (event) => {
           if (event.delta) {
@@ -374,20 +364,13 @@ export class RTSession {
           this.send({ type: "control", action: "text_done", id: contentId });
         },
 
-        [REALTIME_SERVER_EVENTS.ResponseFunctionCallArgumentsDelta]: () =>
-          this.logger.debug(
-            "✅ Ignoring function call arguments delta for simplicity",
-          ),
+        [REALTIME_SERVER_EVENTS.ResponseFunctionCallArgumentsDelta]: () => {},
 
         [REALTIME_SERVER_EVENTS.ResponseFunctionCallArgumentsDone]: (event) =>
           this.handleFunctionCallArgumentsDone(event),
 
-        [REALTIME_SERVER_EVENTS.ResponseDone]: (event) => {
+        [REALTIME_SERVER_EVENTS.ResponseDone]: () => {
           this.updateLatencyMetrics();
-          this.logger.debug(
-            { response_id: event.response?.id },
-            "✅ Response generation completed",
-          );
         },
 
         [REALTIME_SERVER_EVENTS.Error]: (event) => {
@@ -710,7 +693,12 @@ export class RTSession {
 
   private handleClientTextMessage(data: RawData) {
     const parsed = JSON.parse(data.toString()) as WSMessage;
-    this.logger.debug({ parsed }, "✅ Received client message");
+
+    // Ignore car_direct_control messages - handled by server.ts
+    if ((parsed as any).type === "car_direct_control") {
+      return;
+    }
+
     if (
       parsed.type === "user_message" &&
       this.openAIWs.readyState === WebSocket.OPEN
@@ -726,7 +714,6 @@ export class RTSession {
         }),
       );
       this.openAIWs.send(JSON.stringify({ type: "response.create" }));
-      this.logger.debug("✅ User message processed successfully");
     }
   }
 

@@ -31,9 +31,16 @@ export function broadcastToCarDevices(commands: CarCommand[]) {
   let sentCount = 0;
   carConnections.forEach((ws, carId) => {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(messageStr);
-      sentCount++;
-      logger.info({ carId, commands }, "🚗 Sent commands to car");
+      try {
+        ws.send(messageStr, (err) => {
+          if (err) {
+            logger.error({ carId, error: err }, "🔥 Error sending to car");
+          }
+        });
+        sentCount++;
+      } catch (err) {
+        logger.error({ carId, error: err }, "🔥 Exception sending to car");
+      }
     }
   });
 
@@ -49,13 +56,10 @@ app.use(express.json()); // Middleware to parse JSON bodies
 server.on("upgrade", (request, socket, head) => {
   const { pathname } = new URL(request.url!, `http://${request.headers.host}`);
   if (pathname === "/realtime") {
-    logger.debug({ pathname }, "Handling WebSocket upgrade request");
     wss.handleUpgrade(request, socket, head, (ws) => {
-      logger.debug("WebSocket upgrade successful");
       wss.emit("connection", ws, request);
     });
   } else {
-    logger.warn({ pathname }, "Invalid WebSocket path - destroying connection");
     socket.destroy();
   }
 });
@@ -65,7 +69,11 @@ wss.on("connection", (ws: WebSocket) => {
   let rtSession: RTSession | null = null;
   let carId: string | null = null;
 
-  const handleSocketEvent = (eventType: string, data?: any) => {
+  const handleSocketEvent = (
+    eventType: string,
+    data?: any,
+    isBinary?: boolean,
+  ) => {
     switch (eventType) {
       case "message":
         if (!data) {
@@ -73,8 +81,19 @@ wss.on("connection", (ws: WebSocket) => {
           return;
         }
 
+        // Skip binary audio data - let RTSession handle it
+        if (isBinary && rtSession) {
+          return;
+        }
+
         try {
           const messageText = data.toString();
+
+          // Skip non-JSON messages (likely audio data)
+          if (!messageText.startsWith("{") && !messageText.startsWith("[")) {
+            return;
+          }
+
           const parsedMessage = JSON.parse(messageText);
 
           // Handle ESP32 car device registration
@@ -82,7 +101,7 @@ wss.on("connection", (ws: WebSocket) => {
             const newCarId = parsedMessage.carId || `car_${Date.now()}`;
             carId = newCarId;
             carConnections.set(newCarId, ws);
-            logger.info({ carId: newCarId }, "🚗 ESP32 car device registered");
+            logger.info({ carId: newCarId }, "🚗 Car registered");
             ws.send(
               JSON.stringify({ type: "car_registered", carId: newCarId }),
             );
@@ -91,10 +110,6 @@ wss.on("connection", (ws: WebSocket) => {
 
           // Handle direct car control from frontend (bypass AI)
           if (parsedMessage.type === "car_direct_control") {
-            logger.info(
-              { commands: parsedMessage.commands },
-              "🎮 Direct car control received",
-            );
             const sentCount = broadcastToCarDevices(parsedMessage.commands);
             ws.send(
               JSON.stringify({
@@ -103,7 +118,7 @@ wss.on("connection", (ws: WebSocket) => {
                 deviceCount: sentCount,
               }),
             );
-            return;
+            return; // Don't pass to RTSession
           }
 
           // Handle AI session initialization
@@ -115,15 +130,13 @@ wss.on("connection", (ws: WebSocket) => {
               return;
             }
 
-            logger.info("🔄 Initializing RTSession");
             const systemMessage = getSystemMessage(
               parsedMessage.systemMessageType,
             );
-            logger.info({ systemMessage }, "✅ System message retrieved");
 
             rtSession = new RTSession(ws, logger, systemMessage);
-            // Remove message handler once session is created
-            ws.off("message", messageHandler);
+            // NOTE: We keep the message handler to handle car_direct_control
+            // The RTSession will also receive messages via its own handler
           }
         } catch (error) {
           logger.error(
@@ -153,8 +166,8 @@ wss.on("connection", (ws: WebSocket) => {
     }
   };
 
-  const messageHandler = (message: any) =>
-    handleSocketEvent("message", message);
+  const messageHandler = (message: any, isBinary: boolean) =>
+    handleSocketEvent("message", message, isBinary);
 
   ws.on("message", messageHandler);
   ws.on("error", (error: Error) => handleSocketEvent("error", error));

@@ -21,7 +21,7 @@ const char *WIFI_SSID = "Atri";
 const char *WIFI_PASSWORD = "omar1234";
 
 // WebSocket Server Configuration
-const char *WS_HOST = "192.168.1.100"; // Your server IP address
+const char *WS_HOST = "192.168.43.9"; // Your server IP address
 const uint16_t WS_PORT = 8080;
 const char *WS_PATH = "/realtime";
 
@@ -184,13 +184,10 @@ void loop()
 // ==================== MOTOR SETUP ====================
 void setupMotors()
 {
-  // Setup PWM channels for speed control
-  ledcSetup(PWM_CHANNEL_A, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(PWM_CHANNEL_B, PWM_FREQ, PWM_RESOLUTION);
-
-  // Attach PWM channels to enable pins
-  ledcAttachPin(MOTOR_ENA, PWM_CHANNEL_A);
-  ledcAttachPin(MOTOR_ENB, PWM_CHANNEL_B);
+  // Setup PWM and attach to enable pins (ESP32 Arduino Core 3.0+ API)
+  // ledcAttach(pin, freq, resolution) replaces ledcSetup + ledcAttachPin
+  ledcAttach(MOTOR_ENA, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttach(MOTOR_ENB, PWM_FREQ, PWM_RESOLUTION);
 
   // Setup direction control pins
   pinMode(MOTOR_IN1, OUTPUT);
@@ -485,8 +482,9 @@ void processCommandQueue()
 // ==================== MOTOR CONTROL FUNCTIONS ====================
 void setMotorSpeed(int speedA, int speedB)
 {
-  ledcWrite(PWM_CHANNEL_A, abs(speedA));
-  ledcWrite(PWM_CHANNEL_B, abs(speedB));
+  // ESP32 Arduino Core 3.0+: ledcWrite uses pin, not channel
+  ledcWrite(MOTOR_ENA, abs(speedA));
+  ledcWrite(MOTOR_ENB, abs(speedB));
 }
 
 void moveForward(int speed)
