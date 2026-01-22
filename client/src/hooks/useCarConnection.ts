@@ -1,7 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { CarCommand, ConnectionState, AIResponse } from "../types";
 
-const WS_URL = "ws://localhost:8080/realtime";
+const WS_URL =
+  (import.meta.env.VITE_WS_URL as string) || "ws://localhost:8080/realtime";
 
 export function useCarConnection() {
   const [connectionState, setConnectionState] =
