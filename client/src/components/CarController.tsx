@@ -22,7 +22,7 @@ export function CarController() {
   const [led1On, setLed1On] = useState(false);
   const [led2On, setLed2On] = useState(false);
   const [showSpeedControls, setShowSpeedControls] = useState(false);
-  const currentSpeedRef = useRef(120);
+  const currentSpeedRef = useRef(130);
 
   const isConnected = connectionState === "connected";
 

@@ -6,7 +6,7 @@ interface SpeedSliderProps {
   disabled?: boolean;
 }
 
-const MIN_SPEED = 120;
+const MIN_SPEED = 130;
 const MAX_SPEED = 255;
 const DEFAULT_SPEED = MIN_SPEED;
 
@@ -164,7 +164,7 @@ export function SpeedSlider({ onSpeedChange, disabled }: SpeedSliderProps) {
             <span>187</span>
           </div>
           <div className="speed-marker" style={{ bottom: "0%" }}>
-            <span>120</span>
+            <span>130</span>
           </div>
         </div>
       </div>

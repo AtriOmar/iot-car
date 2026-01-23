@@ -90,7 +90,7 @@ export type CarPlayAction = "pirates" | "got" | "squid" | "stop";
 export type CarMoveCommand = {
   type: "move";
   action: CarMoveAction;
-  speed?: number; // 120 (slow), 180 (medium), 255 (fast), defaults to 120
+  speed?: number; // 130 (slow), 180 (medium), 255 (fast), defaults to 130
   duration?: number; // milliseconds, null = indefinite until stop
 };
 

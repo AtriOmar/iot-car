@@ -15,10 +15,10 @@ LANGUAGE RULES:
 - If the user speaks Tunisian Arabic, understand their command but respond with an English message.
 
 SPEED LEVELS:
-- Minimum speed: 120 (use when user says "slow" or doesn't specify speed)
+- Minimum speed: 130 (use when user says "slow" or doesn't specify speed)
 - Medium speed: 180 (use when user says "medium" or "normal")
 - Maximum speed: 255 (use when user says "fast", "full speed", or "maximum")
-- DEFAULT: If the user does NOT explicitly mention speed, ALWAYS use minimum speed (120).
+- DEFAULT: If the user does NOT explicitly mention speed, ALWAYS use minimum speed (130).
 
 CRITICAL RULES - READ CAREFULLY:
 1. ONLY call the send_car_commands function when the user asks you to control the car.
@@ -31,7 +31,7 @@ IMPLICIT COMMANDS:
 - The user does NOT need to say "move" explicitly. If they say a direction, execute it.
 - "forward for 3 seconds" = move forward for 3000ms
 - "left then right" = turn left then turn right
-- "backwards slowly" = move backward at speed 120
+- "backwards slowly" = move backward at speed 130
 - "go fast" = move forward at speed 255
 - "stop" (without specifying what) = stop moving (NOT stop everything, just movement)
 
@@ -40,7 +40,7 @@ COMMAND TYPES:
 1. MOVE COMMAND:
    - action: "forward", "backward", "left", "right", "forward_left", "forward_right", "backward_left", "backward_right", or "stop"
    - The diagonal directions (forward_left, forward_right, backward_left, backward_right) move the car in an arc
-   - speed: 120 (slow/default), 180 (medium), or 255 (fast)
+   - speed: 130 (slow/default), 180 (medium), or 255 (fast)
    - duration: milliseconds (optional). If not provided, runs until a "stop" command is sent
 
 2. BEEP COMMAND:
@@ -79,7 +79,7 @@ User: "Stop" or "stop moving"
 → Call send_car_commands with: { commands: [{ type: "move", action: "stop" }], message: "Stopping" }
 
 User: "Turn on LED 1 and move backward slowly"
-→ Call send_car_commands with: { commands: [{ type: "led", led: 1, action: "on" }, { type: "move", action: "backward", speed: 120 }], message: "Turning on LED 1 and moving backward slowly" }
+→ Call send_car_commands with: { commands: [{ type: "led", led: 1, action: "on" }, { type: "move", action: "backward", speed: 130 }], message: "Turning on LED 1 and moving backward slowly" }
 
 User: "Stop everything"
 → Call send_car_commands with: { commands: [{ type: "move", action: "stop" }, { type: "beep", action: "off" }, { type: "led", led: 1, action: "off" }, { type: "led", led: 2, action: "off" }, { type: "play", action: "stop" }], message: "Stopping all systems" }
@@ -101,7 +101,7 @@ REMEMBER:
 - After executing commands, STOP and WAIT for the next user input.
 - Do NOT keep responding or sending empty commands.
 - The "message" field must ALWAYS be in English.
-- Default speed is 120 (minimum) unless the user specifies otherwise.
+- Default speed is 130 (minimum) unless the user specifies otherwise.
 - You can chain multiple commands in sequence.
 - For continuous actions without duration, the car will keep doing it until stopped.
 - Be creative with sequences when users ask for complex behaviors!
@@ -303,10 +303,10 @@ function getCarCommandsSchema() {
                 },
                 speed: {
                   type: "number",
-                  minimum: 120,
+                  minimum: 130,
                   maximum: 255,
                   description:
-                    "Motor speed: 120 (slow/default), 180 (medium), 255 (fast)",
+                    "Motor speed: 130 (slow/default), 180 (medium), 255 (fast)",
                 },
                 duration: {
                   type: "number",

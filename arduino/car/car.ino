@@ -26,8 +26,10 @@ const char *WIFI_SSID = "Atri";
 const char *WIFI_PASSWORD = "omar1234";
 
 // WebSocket Server Configuration
-const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
-const uint16_t WS_PORT = 50005;
+// const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
+// const uint16_t WS_PORT = 50005;
+const char *WS_HOST = "192.168.43.9"; // Your server IP address
+const uint16_t WS_PORT = 8080;
 const char *WS_PATH = "/realtime";
 
 // Car ID for registration
@@ -36,10 +38,10 @@ const char *CAR_ID = "esp32_car_001";
 // ==================== PIN DEFINITIONS ====================
 // L298N Motor Driver Pins
 const int MOTOR_ENA = 13; // PWM speed control for Motor A (right motor)
-const int MOTOR_IN1 = 27; // Motor A direction pin 1 // I (Omar) reversed the (IN1, IN2) and (IN3, IN4) because the code used to move in the wrong direction
-const int MOTOR_IN2 = 26; // Motor A direction pin 2
-const int MOTOR_IN3 = 12; // Motor B direction pin 1
-const int MOTOR_IN4 = 14; // Motor B direction pin 2
+const int MOTOR_IN1 = 12; // Motor A direction pin 1
+const int MOTOR_IN2 = 14; // Motor A direction pin 2
+const int MOTOR_IN3 = 27; // Motor B direction pin 1
+const int MOTOR_IN4 = 26; // Motor B direction pin 2
 const int MOTOR_ENB = 25; // PWM speed control for Motor B (left motor)
 
 // LED Pins
@@ -553,13 +555,13 @@ void turnLeft(int speed)
 {
   Serial.printf("Turning LEFT at speed %d\n", speed);
 
-  // Motor A (Right) - Forward
-  digitalWrite(MOTOR_IN1, HIGH);
-  digitalWrite(MOTOR_IN2, LOW);
+  // Motor A (Right) - Backward
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, HIGH);
 
-  // Motor B (Left) - Backward (or stop for gentle turn)
-  digitalWrite(MOTOR_IN3, LOW);
-  digitalWrite(MOTOR_IN4, HIGH);
+  // Motor B (Left) - Forward
+  digitalWrite(MOTOR_IN3, HIGH);
+  digitalWrite(MOTOR_IN4, LOW);
 
   setMotorSpeed(speed, speed);
 }
@@ -568,13 +570,13 @@ void turnRight(int speed)
 {
   Serial.printf("Turning RIGHT at speed %d\n", speed);
 
-  // Motor A (Right) - Backward (or stop for gentle turn)
-  digitalWrite(MOTOR_IN1, LOW);
-  digitalWrite(MOTOR_IN2, HIGH);
+  // Motor A (Right) - Forward
+  digitalWrite(MOTOR_IN1, HIGH);
+  digitalWrite(MOTOR_IN2, LOW);
 
-  // Motor B (Left) - Forward
-  digitalWrite(MOTOR_IN3, HIGH);
-  digitalWrite(MOTOR_IN4, LOW);
+  // Motor B (Left) - Backward
+  digitalWrite(MOTOR_IN3, LOW);
+  digitalWrite(MOTOR_IN4, HIGH);
 
   setMotorSpeed(speed, speed);
 }
