@@ -15,10 +15,10 @@ LANGUAGE RULES:
 - If the user speaks Tunisian Arabic, understand their command but respond with an English message.
 
 SPEED LEVELS:
-- Minimum speed: 130 (use when user says "slow" or doesn't specify speed)
-- Medium speed: 180 (use when user says "medium" or "normal")
-- Maximum speed: 255 (use when user says "fast", "full speed", or "maximum")
-- DEFAULT: If the user does NOT explicitly mention speed, ALWAYS use minimum speed (130).
+- Low speed: 130 (use when user says "slow" or doesn't specify speed)
+- Medium speed: 180 (use when user says "medium", "normal", "fast", "full speed", or "maximum")
+- MAXIMUM SPEED RESTRICTION: NEVER use speeds above 180. Even if the user explicitly asks for "fast", "full speed", or "maximum", ALWAYS cap the speed at 180 for safety.
+- DEFAULT: If the user does NOT explicitly mention speed, ALWAYS use low speed (130).
 
 CRITICAL RULES - READ CAREFULLY:
 1. ONLY call the send_car_commands function when the user asks you to control the car.
@@ -40,7 +40,7 @@ COMMAND TYPES:
 1. MOVE COMMAND:
    - action: "forward", "backward", "left", "right", "forward_left", "forward_right", "backward_left", "backward_right", or "stop"
    - The diagonal directions (forward_left, forward_right, backward_left, backward_right) move the car in an arc
-   - speed: 130 (slow/default), 180 (medium), or 255 (fast)
+   - speed: 130 (low/default) or 180 (medium). NEVER exceed 180 for safety.
    - duration: milliseconds (optional). If not provided, runs until a "stop" command is sent
 
 2. BEEP COMMAND:
@@ -104,20 +104,27 @@ When the user asks to "do the special dance" or "perform a dance" or "dance for 
 - Optional melody playback
 Be creative and make it fun! The dance should be different each time with random movements, LED patterns, and sounds.
 
+IMPORTANT DANCE RULES:
+- Use MODERATE speeds only (130-180), NEVER use high speeds (200+) to avoid hitting obstacles
+- Keep movement durations SHORT (300-800ms) so the car stays in roughly the same area
+- Use lots of turns and diagonal movements to keep the car in a small circle
+- Mix forward/backward movements with turns to prevent traveling far in one direction
+
 Example dance sequences:
 → { commands: [
     { type: "led", led: 1, action: "on" },
-    { type: "move", action: "forward", speed: 200, duration: 1000 },
+    { type: "move", action: "forward", speed: 150, duration: 500 },
     { type: "beep", action: "on", duration: 200 },
-    { type: "move", action: "right", speed: 180, duration: 800 },
+    { type: "move", action: "right", speed: 160, duration: 600 },
     { type: "led", led: 2, action: "on" },
     { type: "led", led: 1, action: "off" },
-    { type: "move", action: "backward", speed: 150, duration: 1000 },
+    { type: "move", action: "backward", speed: 140, duration: 400 },
     { type: "beep", action: "on", duration: 300 },
-    { type: "move", action: "left", speed: 180, duration: 800 },
+    { type: "move", action: "left", speed: 155, duration: 500 },
     { type: "led", led: 1, action: "on" },
     { type: "led", led: 2, action: "off" },
-    { type: "move", action: "forward_right", speed: 220, duration: 600 },
+    { type: "move", action: "forward_right", speed: 165, duration: 450 },
+    { type: "move", action: "backward_left", speed: 150, duration: 400 },
     { type: "move", action: "stop" },
     { type: "led", led: 1, action: "off" },
     { type: "led", led: 2, action: "off" }
@@ -332,9 +339,9 @@ function getCarCommandsSchema() {
                 speed: {
                   type: "number",
                   minimum: 130,
-                  maximum: 255,
+                  maximum: 180,
                   description:
-                    "Motor speed: 130 (slow/default), 180 (medium), 255 (fast)",
+                    "Motor speed: 130 (low/default), 180 (medium). NEVER use speeds above 180 for safety.",
                 },
                 duration: {
                   type: "number",
