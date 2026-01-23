@@ -11,7 +11,6 @@ Control your ESP32 IoT car with **AI voice commands** or **joystick/keyboard con
 - 💡 **LED Control**: Turn LEDs on/off via voice
 - 🔊 **Beeper Control**: Sound effects and melodies
 - 📱 **Progressive Web App**: Install as native app on mobile/desktop
-- 🔐 **Authentication**: Simple login system for security
 - 📊 **Speed Control**: Dynamic speed slider (Low/Medium speeds for safety)
 
 ## Hardware Requirements
