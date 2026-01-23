@@ -1,11 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useCarConnection } from "../hooks/useCarConnection";
 import { JoystickControl } from "./JoystickControl";
 import type { JoystickDirection } from "./JoystickControl";
+import { SpeedSlider } from "./SpeedSlider";
 import { AiResponseBox } from "./AiResponseBox";
 import type { CarCommand } from "../types";
-
-type SpeedLevel = 120 | 180 | 255;
 
 export function CarController() {
   const {
@@ -23,9 +22,14 @@ export function CarController() {
   const [led1On, setLed1On] = useState(false);
   const [led2On, setLed2On] = useState(false);
   const [showSpeedControls, setShowSpeedControls] = useState(false);
-  const [currentSpeed, setCurrentSpeed] = useState<SpeedLevel>(180);
+  const currentSpeedRef = useRef(120);
 
   const isConnected = connectionState === "connected";
+
+  // Handle speed change from slider
+  const handleSpeedChange = useCallback((speed: number) => {
+    currentSpeedRef.current = speed;
+  }, []);
 
   // Handle joystick movement
   const handleJoystickMove = useCallback(
@@ -33,11 +37,11 @@ export function CarController() {
       const command: CarCommand = {
         type: "move",
         action: direction,
-        speed: currentSpeed,
+        speed: currentSpeedRef.current,
       };
       sendCarCommand([command]);
     },
-    [sendCarCommand, currentSpeed],
+    [sendCarCommand],
   );
 
   const handleJoystickStop = useCallback(() => {
@@ -105,49 +109,31 @@ export function CarController() {
         <div className="gap-1 grid grid-cols-3 shrink-0">
           {showSpeedControls ? (
             <>
-              {/* Speed 120 (Slow) */}
-              <button
-                className={`w-16 h-16 border-none rounded-xl bg-linear-to-br from-slate-600 to-slate-700 text-white cursor-pointer flex flex-col items-center justify-center transition-all duration-150 ease-out shadow-lg shadow-black/30 touch-none select-none hover:from-slate-500 hover:to-slate-600 active:scale-95 active:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                  currentSpeed === 120
-                    ? "from-cyan-500! to-cyan-600! shadow-cyan-500/40"
-                    : ""
-                }`}
-                onClick={() => setCurrentSpeed(120)}
-                disabled={!isConnected}
-                aria-label="Set slow speed"
-              >
-                <span className="font-bold text-lg">1</span>
-                <span className="opacity-70 text-[10px]">Slow</span>
-              </button>
+              {/* Speed Slider - spans 2 columns */}
+              <div className="flex justify-center items-center col-span-2">
+                <SpeedSlider
+                  onSpeedChange={handleSpeedChange}
+                  disabled={!isConnected}
+                />
+              </div>
 
-              {/* Speed 180 (Medium) */}
+              {/* Back Button */}
               <button
-                className={`w-16 h-16 border-none rounded-xl bg-linear-to-br from-slate-600 to-slate-700 text-white cursor-pointer flex flex-col items-center justify-center transition-all duration-150 ease-out shadow-lg shadow-black/30 touch-none select-none hover:from-slate-500 hover:to-slate-600 active:scale-95 active:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                  currentSpeed === 180
-                    ? "from-yellow-500! to-yellow-600! shadow-yellow-500/40"
-                    : ""
-                }`}
-                onClick={() => setCurrentSpeed(180)}
-                disabled={!isConnected}
-                aria-label="Set medium speed"
+                className="flex justify-center items-center self-end w-16 h-16 border-none rounded-xl bg-linear-to-br from-slate-600 hover:from-slate-500 to-slate-700 hover:to-slate-600 shadow-black/30 shadow-lg active:shadow-md text-white active:scale-95 transition-all duration-150 ease-out touch-none cursor-pointer select-none"
+                onClick={() => setShowSpeedControls(false)}
+                aria-label="Back to controls"
               >
-                <span className="font-bold text-lg">2</span>
-                <span className="opacity-70 text-[10px]">Med</span>
-              </button>
-
-              {/* Speed 255 (Fast) */}
-              <button
-                className={`w-16 h-16 border-none rounded-xl bg-linear-to-br from-slate-600 to-slate-700 text-white cursor-pointer flex flex-col items-center justify-center transition-all duration-150 ease-out shadow-lg shadow-black/30 touch-none select-none hover:from-slate-500 hover:to-slate-600 active:scale-95 active:shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-                  currentSpeed === 255
-                    ? "from-red-500! to-red-600! shadow-red-500/40"
-                    : ""
-                }`}
-                onClick={() => setCurrentSpeed(255)}
-                disabled={!isConnected}
-                aria-label="Set fast speed"
-              >
-                <span className="font-bold text-lg">3</span>
-                <span className="opacity-70 text-[10px]">Fast</span>
+                <svg
+                  className="w-6 h-6"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </button>
             </>
           ) : (
@@ -262,13 +248,7 @@ export function CarController() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="opacity-70 text-[10px]">
-                  {currentSpeed === 120
-                    ? "Slow"
-                    : currentSpeed === 180
-                      ? "Med"
-                      : "Fast"}
-                </span>
+                <span className="opacity-70 text-[10px]">Speed</span>
               </button>
 
               {/* Connection Button */}
