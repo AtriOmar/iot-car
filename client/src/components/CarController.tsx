@@ -102,7 +102,7 @@ export function CarController() {
         <div className="flex-1" />
 
         {/* Action Controls or Speed Controls */}
-        <div className="gap-1 grid grid-cols-2 shrink-0">
+        <div className="gap-1 grid grid-cols-3 shrink-0">
           {showSpeedControls ? (
             <>
               {/* Speed 120 (Slow) */}
@@ -148,25 +148,6 @@ export function CarController() {
               >
                 <span className="font-bold text-lg">3</span>
                 <span className="opacity-70 text-[10px]">Fast</span>
-              </button>
-
-              {/* Back Button */}
-              <button
-                className="flex justify-center items-center w-16 h-16 border-none rounded-xl bg-linear-to-br from-slate-600 hover:from-slate-500 to-slate-700 hover:to-slate-600 shadow-black/30 shadow-lg active:shadow-md text-white active:scale-95 transition-all duration-150 ease-out touch-none cursor-pointer select-none"
-                onClick={() => setShowSpeedControls(false)}
-                aria-label="Back to controls"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
               </button>
             </>
           ) : (
