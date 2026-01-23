@@ -88,6 +88,7 @@ export function useCarConnection() {
             const response: AIResponse = {
               id: message.id || Date.now().toString(),
               text: params.message || "",
+              message: params.message || "",
               commands: params.commands || [],
               timestamp: new Date(),
             };

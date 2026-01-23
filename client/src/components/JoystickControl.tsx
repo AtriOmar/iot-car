@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import Joystick, { Direction, DirectionCount } from "rc-joystick";
+// import "./JoystickControl.css";
 
 export type JoystickDirection =
   | "forward"
@@ -13,7 +14,7 @@ export type JoystickDirection =
   | "stop";
 
 interface JoystickControlProps {
-  onMove: (direction: JoystickDirection, speed: number) => void;
+  onMove: (direction: JoystickDirection) => void;
   onStop: () => void;
   disabled?: boolean;
 }
@@ -43,22 +44,12 @@ function mapDirection(direction: Direction): JoystickDirection {
   }
 }
 
-// Map distance (0-1) to speed (120-255)
-function getSpeed(distance: number): number {
-  const minSpeed = 120;
-  const maxSpeed = 255;
-  // Clamp distance between 0 and 1
-  const clampedDistance = Math.min(1, Math.max(0, distance));
-  return Math.round(minSpeed + clampedDistance * (maxSpeed - minSpeed));
-}
-
 export function JoystickControl({
   onMove,
   onStop,
   disabled,
 }: JoystickControlProps) {
   const lastDirectionRef = useRef<JoystickDirection>("stop");
-  const lastSpeedRef = useRef<number>(0);
   const isMovingRef = useRef(false);
 
   const handleChange = useCallback(
@@ -67,34 +58,23 @@ export function JoystickControl({
 
       const { direction, distance } = event;
 
-      console.log(
-        "-------------------- direction, distance --------------------",
-      );
-      console.log(direction, distance);
-
       // If center or very small distance, treat as stop
       if (direction === Direction.Center || distance < 0.15) {
         if (isMovingRef.current) {
           isMovingRef.current = false;
           lastDirectionRef.current = "stop";
-          lastSpeedRef.current = 0;
           onStop();
         }
         return;
       }
 
       const mappedDirection = mapDirection(direction);
-      const speed = getSpeed(distance);
 
-      // Only send command if direction or speed changed significantly
-      const speedChanged = Math.abs(speed - lastSpeedRef.current) > 10;
-      const directionChanged = mappedDirection !== lastDirectionRef.current;
-
-      if (directionChanged || speedChanged) {
+      // Only send command if direction changed
+      if (mappedDirection !== lastDirectionRef.current) {
         lastDirectionRef.current = mappedDirection;
-        lastSpeedRef.current = speed;
         isMovingRef.current = true;
-        onMove(mappedDirection, speed);
+        onMove(mappedDirection);
       }
     },
     [disabled, onMove, onStop],
@@ -102,7 +82,7 @@ export function JoystickControl({
 
   return (
     <div
-      className={`flex items-center justify-center ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+      className={`joystick-dark flex items-center ${disabled ? "opacity-50 pointer-events-none" : ""}`}
     >
       <Joystick
         baseRadius={70}

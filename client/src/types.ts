@@ -60,6 +60,7 @@ export type WSTextDeltaMessage = {
 export type AIResponse = {
   id: string;
   text: string;
+  message?: string;
   commands?: CarCommand[];
   timestamp: Date;
 };
