@@ -599,64 +599,64 @@ void moveForwardLeft(int speed)
 {
   Serial.printf("Moving FORWARD-LEFT at speed %d\n", speed);
 
-  // Motor A (Right) - Full speed forward
+  // Motor A (Right) - Reduced speed forward
   digitalWrite(MOTOR_IN1, HIGH);
   digitalWrite(MOTOR_IN2, LOW);
 
-  // Motor B (Left) - Reduced speed forward (creates arc to the left)
+  // Motor B (Left) - Full speed forward (creates arc to the left)
   digitalWrite(MOTOR_IN3, HIGH);
   digitalWrite(MOTOR_IN4, LOW);
 
-  // Right motor faster, left motor slower for forward-left arc
-  setMotorSpeed(speed, speed * 0.4);
+  // Left motor faster, right motor slower for forward-left arc
+  setMotorSpeed(speed * 0.4, speed);
 }
 
 void moveForwardRight(int speed)
 {
   Serial.printf("Moving FORWARD-RIGHT at speed %d\n", speed);
 
-  // Motor A (Right) - Reduced speed forward
+  // Motor A (Right) - Full speed forward (creates arc to the right)
   digitalWrite(MOTOR_IN1, HIGH);
   digitalWrite(MOTOR_IN2, LOW);
 
-  // Motor B (Left) - Full speed forward (creates arc to the right)
+  // Motor B (Left) - Reduced speed forward
   digitalWrite(MOTOR_IN3, HIGH);
   digitalWrite(MOTOR_IN4, LOW);
 
-  // Left motor faster, right motor slower for forward-right arc
-  setMotorSpeed(speed * 0.4, speed);
+  // Right motor faster, left motor slower for forward-right arc
+  setMotorSpeed(speed, speed * 0.4);
 }
 
 void moveBackwardLeft(int speed)
 {
   Serial.printf("Moving BACKWARD-LEFT at speed %d\n", speed);
 
-  // Motor A (Right) - Full speed backward
+  // Motor A (Right) - Reduced speed backward
   digitalWrite(MOTOR_IN1, LOW);
   digitalWrite(MOTOR_IN2, HIGH);
 
-  // Motor B (Left) - Reduced speed backward (creates arc to the left)
+  // Motor B (Left) - Full speed backward (creates arc to the left)
   digitalWrite(MOTOR_IN3, LOW);
   digitalWrite(MOTOR_IN4, HIGH);
 
-  // Right motor faster, left motor slower
-  setMotorSpeed(speed, speed * 0.4);
+  // Left motor faster, right motor slower
+  setMotorSpeed(speed * 0.4, speed);
 }
 
 void moveBackwardRight(int speed)
 {
   Serial.printf("Moving BACKWARD-RIGHT at speed %d\n", speed);
 
-  // Motor A (Right) - Reduced speed backward
+  // Motor A (Right) - Full speed backward (creates arc to the right)
   digitalWrite(MOTOR_IN1, LOW);
   digitalWrite(MOTOR_IN2, HIGH);
 
-  // Motor B (Left) - Full speed backward (creates arc to the right)
+  // Motor B (Left) - Reduced speed backward
   digitalWrite(MOTOR_IN3, LOW);
   digitalWrite(MOTOR_IN4, HIGH);
 
-  // Left motor faster, right motor slower
-  setMotorSpeed(speed * 0.4, speed);
+  // Right motor faster, left motor slower
+  setMotorSpeed(speed, speed * 0.4);
 }
 
 // ==================== LED CONTROL ====================
