@@ -328,6 +328,9 @@ void stopMelody()
     melodyPlaying = false;
     currentSong = SONG_NONE;
     noTone(BEEPER_PIN);
+    // Reset the pin to digital output mode after tone
+    pinMode(BEEPER_PIN, OUTPUT);
+    digitalWrite(BEEPER_PIN, LOW);
     Serial.println("🎵 Melody stopped");
 }
 
@@ -379,6 +382,9 @@ void updateMelody()
                 melodyPlaying = false;
                 currentSong = SONG_NONE;
                 noTone(BEEPER_PIN);
+                // Reset the pin to digital output mode after tone
+                pinMode(BEEPER_PIN, OUTPUT);
+                digitalWrite(BEEPER_PIN, LOW);
                 Serial.println("🎵 Melody complete");
                 return;
             }

@@ -35,6 +35,15 @@ IMPLICIT COMMANDS:
 - "go fast" = move forward at speed 255
 - "stop" (without specifying what) = stop moving (NOT stop everything, just movement)
 
+TURNING BEHAVIOR:
+- When the user says "turn left" or "turn right" (or just "left"/"right"), they want a 90-degree turn, NOT continuous turning
+- ALWAYS add a duration of 500ms for turn commands (left/right) unless the user specifies a different duration
+- Examples:
+  - "turn right" → { type: "move", action: "right", speed: 130, duration: 500 }
+  - "go left" → { type: "move", action: "left", speed: 130, duration: 500 }
+  - "turn left for 2 seconds" → { type: "move", action: "left", speed: 130, duration: 2000 } (user specified duration)
+- This does NOT apply to forward/backward movements, only to left/right turns
+
 COMMAND TYPES:
 
 1. MOVE COMMAND:
