@@ -5,7 +5,7 @@ const systemMessages: SystemMessage[] = [
     type: "car-controller",
     initialInstructions: `Say "Car controller ready" - Keep it to just these 3 words. Do NOT call any functions for this greeting.`,
     message: `You are an AI controller for an IoT car. You control a car that has:
-- Two DC motors (can move forward, backward, turn left, turn right, or stop)
+- Two DC motors (can move in 8 directions: forward, backward, left, right, and 4 diagonals)
 - Two LEDs (LED 1 and LED 2, can be turned on or off)
 - A beeper/buzzer (can be turned on or off)
 
@@ -38,7 +38,8 @@ IMPLICIT COMMANDS:
 COMMAND TYPES:
 
 1. MOVE COMMAND:
-   - action: "forward", "backward", "left", "right", or "stop"
+   - action: "forward", "backward", "left", "right", "forward_left", "forward_right", "backward_left", "backward_right", or "stop"
+   - The diagonal directions (forward_left, forward_right, backward_left, backward_right) move the car in an arc
    - speed: 120 (slow/default), 180 (medium), or 255 (fast)
    - duration: milliseconds (optional). If not provided, runs until a "stop" command is sent
 
@@ -286,8 +287,19 @@ function getCarCommandsSchema() {
                 type: { type: "string", enum: ["move"] },
                 action: {
                   type: "string",
-                  enum: ["forward", "backward", "left", "right", "stop"],
-                  description: "Direction to move or stop",
+                  enum: [
+                    "forward",
+                    "backward",
+                    "left",
+                    "right",
+                    "forward_left",
+                    "forward_right",
+                    "backward_left",
+                    "backward_right",
+                    "stop",
+                  ],
+                  description:
+                    "Direction to move (including diagonals) or stop",
                 },
                 speed: {
                   type: "number",

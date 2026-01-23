@@ -73,7 +73,16 @@ export type RateLimits = {
 
 // ==================== CAR CONTROL TYPES ====================
 
-export type CarMoveAction = "forward" | "backward" | "left" | "right" | "stop";
+export type CarMoveAction =
+  | "forward"
+  | "backward"
+  | "left"
+  | "right"
+  | "forward_left"
+  | "forward_right"
+  | "backward_left"
+  | "backward_right"
+  | "stop";
 export type CarToggleAction = "on" | "off";
 export type CarLedId = 1 | 2;
 export type CarPlayAction = "pirates" | "got" | "squid" | "stop";

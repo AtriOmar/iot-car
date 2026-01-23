@@ -1,5 +1,14 @@
 // Car command types (matching server types)
-export type CarMoveAction = "forward" | "backward" | "left" | "right" | "stop";
+export type CarMoveAction =
+  | "forward"
+  | "backward"
+  | "left"
+  | "right"
+  | "forward_left"
+  | "forward_right"
+  | "backward_left"
+  | "backward_right"
+  | "stop";
 export type CarToggleAction = "on" | "off";
 export type CarLedId = 1 | 2;
 

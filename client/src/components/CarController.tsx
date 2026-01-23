@@ -1,9 +1,8 @@
 import { useState, useCallback } from "react";
 import { useCarConnection } from "../hooks/useCarConnection";
-import { DirectionPad } from "./DirectionPad";
-import { ControlButtons } from "./ControlButtons";
+import { JoystickControl } from "./JoystickControl";
+import type { JoystickDirection } from "./JoystickControl";
 import { AiResponseBox } from "./AiResponseBox";
-import { ConnectionButton } from "./ConnectionButton";
 import type { CarCommand } from "../types";
 
 export function CarController() {
@@ -24,20 +23,20 @@ export function CarController() {
 
   const isConnected = connectionState === "connected";
 
-  // Handle direction pad
-  const handleDirectionStart = useCallback(
-    (direction: "forward" | "backward" | "left" | "right") => {
+  // Handle joystick movement
+  const handleJoystickMove = useCallback(
+    (direction: JoystickDirection, speed: number) => {
       const command: CarCommand = {
         type: "move",
         action: direction,
-        speed: 200,
+        speed: speed,
       };
       sendCarCommand([command]);
     },
     [sendCarCommand],
   );
 
-  const handleDirectionEnd = useCallback(() => {
+  const handleJoystickStop = useCallback(() => {
     const command: CarCommand = {
       type: "move",
       action: "stop",
@@ -89,12 +88,12 @@ export function CarController() {
       />
 
       {/* Controls Container */}
-      <div className="flex gap-3">
-        {/* Movement Controls */}
-        <div className="flex-1">
-          <DirectionPad
-            onDirectionStart={handleDirectionStart}
-            onDirectionEnd={handleDirectionEnd}
+      <div className="flex items-center gap-3">
+        {/* Movement Controls - Joystick */}
+        <div className="flex flex-1 justify-center">
+          <JoystickControl
+            onMove={handleJoystickMove}
+            onStop={handleJoystickStop}
             disabled={!isConnected}
           />
         </div>

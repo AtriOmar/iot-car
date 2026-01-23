@@ -26,8 +26,8 @@ const char *WIFI_SSID = "Atri";
 const char *WIFI_PASSWORD = "omar1234";
 
 // WebSocket Server Configuration
-const char *WS_HOST = "192.168.43.9"; // Your server IP address
-const uint16_t WS_PORT = 8080;
+const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
+const uint16_t WS_PORT = 50005;
 const char *WS_PATH = "/realtime";
 
 // Car ID for registration
@@ -36,10 +36,10 @@ const char *CAR_ID = "esp32_car_001";
 // ==================== PIN DEFINITIONS ====================
 // L298N Motor Driver Pins
 const int MOTOR_ENA = 13; // PWM speed control for Motor A (right motor)
-const int MOTOR_IN1 = 12; // Motor A direction pin 1
-const int MOTOR_IN2 = 14; // Motor A direction pin 2
-const int MOTOR_IN3 = 27; // Motor B direction pin 1
-const int MOTOR_IN4 = 26; // Motor B direction pin 2
+const int MOTOR_IN1 = 27; // Motor A direction pin 1 // I (Omar) reversed the (IN1, IN2) and (IN3, IN4) because the code used to move in the wrong direction
+const int MOTOR_IN2 = 26; // Motor A direction pin 2
+const int MOTOR_IN3 = 12; // Motor B direction pin 1
+const int MOTOR_IN4 = 14; // Motor B direction pin 2
 const int MOTOR_ENB = 25; // PWM speed control for Motor B (left motor)
 
 // LED Pins
@@ -101,6 +101,10 @@ void moveForward(int speed);
 void moveBackward(int speed);
 void turnLeft(int speed);
 void turnRight(int speed);
+void moveForwardLeft(int speed);
+void moveForwardRight(int speed);
+void moveBackwardLeft(int speed);
+void moveBackwardRight(int speed);
 void stopMotors();
 void setLED(int led, bool state);
 void setBeeper(bool state);
@@ -427,6 +431,22 @@ void processCommandQueue()
       {
         turnRight(cmd.speed);
       }
+      else if (cmd.action == "forward_left")
+      {
+        moveForwardLeft(cmd.speed);
+      }
+      else if (cmd.action == "forward_right")
+      {
+        moveForwardRight(cmd.speed);
+      }
+      else if (cmd.action == "backward_left")
+      {
+        moveBackwardLeft(cmd.speed);
+      }
+      else if (cmd.action == "backward_right")
+      {
+        moveBackwardRight(cmd.speed);
+      }
       else if (cmd.action == "stop")
       {
         stopMotors();
@@ -570,6 +590,71 @@ void stopMotors()
   digitalWrite(MOTOR_IN4, LOW);
 
   setMotorSpeed(0, 0);
+}
+
+// ==================== DIAGONAL MOVEMENT FUNCTIONS ====================
+void moveForwardLeft(int speed)
+{
+  Serial.printf("Moving FORWARD-LEFT at speed %d\n", speed);
+
+  // Motor A (Right) - Full speed forward
+  digitalWrite(MOTOR_IN1, HIGH);
+  digitalWrite(MOTOR_IN2, LOW);
+
+  // Motor B (Left) - Reduced speed forward (creates arc to the left)
+  digitalWrite(MOTOR_IN3, HIGH);
+  digitalWrite(MOTOR_IN4, LOW);
+
+  // Right motor faster, left motor slower for forward-left arc
+  setMotorSpeed(speed, speed * 0.4);
+}
+
+void moveForwardRight(int speed)
+{
+  Serial.printf("Moving FORWARD-RIGHT at speed %d\n", speed);
+
+  // Motor A (Right) - Reduced speed forward
+  digitalWrite(MOTOR_IN1, HIGH);
+  digitalWrite(MOTOR_IN2, LOW);
+
+  // Motor B (Left) - Full speed forward (creates arc to the right)
+  digitalWrite(MOTOR_IN3, HIGH);
+  digitalWrite(MOTOR_IN4, LOW);
+
+  // Left motor faster, right motor slower for forward-right arc
+  setMotorSpeed(speed * 0.4, speed);
+}
+
+void moveBackwardLeft(int speed)
+{
+  Serial.printf("Moving BACKWARD-LEFT at speed %d\n", speed);
+
+  // Motor A (Right) - Full speed backward
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, HIGH);
+
+  // Motor B (Left) - Reduced speed backward (creates arc to the left)
+  digitalWrite(MOTOR_IN3, LOW);
+  digitalWrite(MOTOR_IN4, HIGH);
+
+  // Right motor faster, left motor slower
+  setMotorSpeed(speed, speed * 0.4);
+}
+
+void moveBackwardRight(int speed)
+{
+  Serial.printf("Moving BACKWARD-RIGHT at speed %d\n", speed);
+
+  // Motor A (Right) - Reduced speed backward
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, HIGH);
+
+  // Motor B (Left) - Full speed backward (creates arc to the right)
+  digitalWrite(MOTOR_IN3, LOW);
+  digitalWrite(MOTOR_IN4, HIGH);
+
+  // Left motor faster, right motor slower
+  setMotorSpeed(speed * 0.4, speed);
 }
 
 // ==================== LED CONTROL ====================
