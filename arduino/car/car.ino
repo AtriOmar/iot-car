@@ -26,10 +26,10 @@ const char *WIFI_SSID = "Atri";
 const char *WIFI_PASSWORD = "omar1234";
 
 // WebSocket Server Configuration
-// const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
-// const uint16_t WS_PORT = 50005;
-const char *WS_HOST = "192.168.43.9"; // Your server IP address
-const uint16_t WS_PORT = 8080;
+const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
+const uint16_t WS_PORT = 50005;
+// const char *WS_HOST = "192.168.43.9"; // Your server IP address
+// const uint16_t WS_PORT = 8080;
 const char *WS_PATH = "/realtime";
 
 // Car ID for registration
