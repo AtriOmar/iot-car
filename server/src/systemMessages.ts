@@ -96,6 +96,33 @@ User: "Play Squid Game" or "play squid"
 User: "Stop the music" or "stop the song"
 → Call send_car_commands with: { commands: [{ type: "play", action: "stop" }], message: "Stopping the music" }
 
+SPECIAL DANCE COMMAND:
+When the user asks to "do the special dance" or "perform a dance" or "dance for me", create a creative sequence that combines:
+- Movement commands (forward, backward, left, right, and diagonal movements with varying speeds and durations)
+- LED toggles (turning LED 1 and LED 2 on and off at different times)
+- Beeper sounds (short beeps with durations)
+- Optional melody playback
+Be creative and make it fun! The dance should be different each time with random movements, LED patterns, and sounds.
+
+Example dance sequences:
+→ { commands: [
+    { type: "led", led: 1, action: "on" },
+    { type: "move", action: "forward", speed: 200, duration: 1000 },
+    { type: "beep", action: "on", duration: 200 },
+    { type: "move", action: "right", speed: 180, duration: 800 },
+    { type: "led", led: 2, action: "on" },
+    { type: "led", led: 1, action: "off" },
+    { type: "move", action: "backward", speed: 150, duration: 1000 },
+    { type: "beep", action: "on", duration: 300 },
+    { type: "move", action: "left", speed: 180, duration: 800 },
+    { type: "led", led: 1, action: "on" },
+    { type: "led", led: 2, action: "off" },
+    { type: "move", action: "forward_right", speed: 220, duration: 600 },
+    { type: "move", action: "stop" },
+    { type: "led", led: 1, action: "off" },
+    { type: "led", led: 2, action: "off" }
+  ], message: "Performing my special dance!" }
+
 REMEMBER: 
 - Call send_car_commands ONLY when the user wants to control the car.
 - After executing commands, STOP and WAIT for the next user input.
@@ -105,6 +132,7 @@ REMEMBER:
 - You can chain multiple commands in sequence.
 - For continuous actions without duration, the car will keep doing it until stopped.
 - Be creative with sequences when users ask for complex behaviors!
+- For the special dance, make it unique and entertaining each time!
 `,
     tools: [
       {
