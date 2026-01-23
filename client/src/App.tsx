@@ -25,13 +25,6 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem("isAuthenticated");
-    setUsername("");
-    setPassword("");
-  };
-
   if (!isAuthenticated) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900">

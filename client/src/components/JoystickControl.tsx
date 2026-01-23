@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import Joystick, { Direction, DirectionCount } from "rc-joystick";
 // import "./JoystickControl.css";
 
@@ -51,6 +51,7 @@ export function JoystickControl({
 }: JoystickControlProps) {
   const lastDirectionRef = useRef<JoystickDirection>("stop");
   const isMovingRef = useRef(false);
+  const pressedKeysRef = useRef<Set<string>>(new Set());
 
   const handleChange = useCallback(
     (event: { direction: Direction; distance: number }) => {
@@ -79,6 +80,107 @@ export function JoystickControl({
     },
     [disabled, onMove, onStop],
   );
+
+  // Determine direction based on pressed keys
+  const getKeyboardDirection = useCallback((): JoystickDirection => {
+    const keys = pressedKeysRef.current;
+    const up = keys.has("ArrowUp") || keys.has("w") || keys.has("W");
+    const down = keys.has("ArrowDown") || keys.has("s") || keys.has("S");
+    const left = keys.has("ArrowLeft") || keys.has("a") || keys.has("A");
+    const right = keys.has("ArrowRight") || keys.has("d") || keys.has("D");
+
+    if (up && left) return "forward_left";
+    if (up && right) return "forward_right";
+    if (down && left) return "backward_left";
+    if (down && right) return "backward_right";
+    if (up) return "forward";
+    if (down) return "backward";
+    if (left) return "left";
+    if (right) return "right";
+    return "stop";
+  }, []);
+
+  // Keyboard controls
+  useEffect(() => {
+    if (disabled) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key;
+      const validKeys = [
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "w",
+        "W",
+        "a",
+        "A",
+        "s",
+        "S",
+        "d",
+        "D",
+      ];
+
+      if (!validKeys.includes(key)) return;
+
+      e.preventDefault();
+
+      if (pressedKeysRef.current.has(key)) return;
+
+      pressedKeysRef.current.add(key);
+      const direction = getKeyboardDirection();
+
+      if (direction !== "stop" && direction !== lastDirectionRef.current) {
+        lastDirectionRef.current = direction;
+        isMovingRef.current = true;
+        onMove(direction);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key;
+      const validKeys = [
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "w",
+        "W",
+        "a",
+        "A",
+        "s",
+        "S",
+        "d",
+        "D",
+      ];
+
+      if (!validKeys.includes(key)) return;
+
+      e.preventDefault();
+
+      pressedKeysRef.current.delete(key);
+      const direction = getKeyboardDirection();
+
+      if (direction === "stop") {
+        if (isMovingRef.current) {
+          isMovingRef.current = false;
+          lastDirectionRef.current = "stop";
+          onStop();
+        }
+      } else if (direction !== lastDirectionRef.current) {
+        lastDirectionRef.current = direction;
+        onMove(direction);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [disabled, onMove, onStop, getKeyboardDirection]);
 
   return (
     <div

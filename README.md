@@ -1,44 +1,184 @@
-# Realtime AI App - Language Coach and Medical Form Assistant
+# IoT Car Controller - AI Voice & Joystick Control
 
-This project demonstrates how to build a real-time AI application using the Azure OpenAI Realtime API. The demo app features a language coach and a medical form assistant. The language coach allows users to practice speaking a language and get instant feedback on their pronunciation, while the medical form assistant helps users fill out medical forms by conversing with them using their voice.
+Control your ESP32 IoT car with **AI voice commands** or **joystick/keyboard controls**. This project demonstrates real-time control of an autonomous vehicle using Azure OpenAI or OpenAI's Realtime API.
 
-- [View Repo Adventure Walkthrough](https://azure-samples.github.io/RealtimeAIApp-JS/)
+## Features
 
-**Language Coach**
+- 🎙️ **Voice Control**: Command your car with natural language (e.g., "Go forward", "Turn right", "Do a special dance")
+- 🕹️ **Joystick Control**: Use an on-screen joystick for precise movement control
+- ⌨️ **Keyboard Control**: Use Arrow Keys or WASD for car control
+- 🤖 **AI Assistant**: Real-time AI responses and command execution
+- 💡 **LED Control**: Turn LEDs on/off via voice
+- 🔊 **Beeper Control**: Sound effects and melodies
+- 📱 **Progressive Web App**: Install as native app on mobile/desktop
+- 🔐 **Authentication**: Simple login system for security
+- 📊 **Speed Control**: Dynamic speed slider (Low/Medium speeds for safety)
 
-![Language Coach Screenshot](images/language-coach.png)
+## Hardware Requirements
 
-**Medical Form Assistant**
-
-![Medical Form Assistant Screenshot](images/medical-form.png)
+- **Microcontroller**: ESP32 with WiFi
+- **Motor Driver**: L298N dual motor driver
+- **Motors**: 2x DC motors
+- **Peripherals**:
+  - 2x LEDs (GPIO 2, 4)
+  - 1x Buzzer/Beeper (GPIO 15)
+  - Melodic sounds support
+- **Power**: USB or battery power
 
 ## Getting Started
 
-1. Clone the project.
-2. Create a `gpt-realtime` model deployment in [Azure AI Foundry](https://ai.azure.com).
-3. Rename `.env.example` to `.env` in the root of the project.
-4. Add your `gpt-realtime` endpoint to `OPENAI_ENDPOINT` and your key to `OPENAI_API_KEY`. You can get those values from Azure AI Foundry.
+### Prerequisites
 
-  ```
-  OPENAI_API_KEY=
-  OPENAI_MODEL=gpt-realtime
-  OPENAI_ENDPOINT=
-  OPENAI_API_VERSION=2025-04-01-preview
-  BACKEND=azure
-  ```
+- Node.js (latest LTS)
+- Azure OpenAI service deployment with `gpt-realtime` model OR OpenAI API key
+- Arduino IDE (for ESP32 programming)
 
-> Note: If you'd like to use OpenAI instead of Azure OpenAI, add your OpenAI API key to `OPENAI_API_KEY` and leave the `OPENAI_ENDPOINT` blank. Remove the value for `BACKEND`.
+### Setup
 
-4. Run `npm install` in the `client` and `server` directories.
-5. Run `npm run dev` in the `server` directory.
-6. Run `npm start` in the `client` directory.
-7. Click the `Connect` button in the browser to get started, allow your microphone to be accessed, and start speaking.
-8. Click the `Disconnect` button to stop the session.
-## Keyless Approach
+1. Clone the repository
+2. Configure `.env` file:
+   ```bash
+   cp .env.example .env
+   ```
+3. Add your API credentials:
 
-If you'd like to use the more secure "keyless" approach with Azure OpenAI, run the following command to add the *OpenAI Contributor* role to your user principal. Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) if you don't have it on your machine already.
+   ```
+   OPENAI_API_KEY=your_key_here
+   OPENAI_MODEL=gpt-realtime
+   OPENAI_ENDPOINT=your_azure_endpoint_here
+   OPENAI_API_VERSION=2025-04-01-preview
+   BACKEND=azure
+   ```
+
+4. Install dependencies:
+
+   ```bash
+   cd client && npm install
+   cd ../server && npm install
+   ```
+
+5. Upload Arduino code to ESP32:
+   - Open `arduino/car/car.ino` in Arduino IDE
+   - Configure WiFi SSID and password in the sketch
+   - Set WebSocket server IP address
+   - Upload to your ESP32
+
+6. Start the backend server:
+
+   ```bash
+   cd server && npm run dev
+   ```
+
+7. Start the frontend (in another terminal):
+
+   ```bash
+   cd client && npm start
+   ```
+
+8. Open your browser to `http://localhost:4200` and login with:
+   - **Username**: `user`
+   - **Password**: `1234`
+
+## Controls
+
+### Voice Commands
+
+- "Go forward" / "Move forward for 3 seconds"
+- "Turn left" / "Turn right" (90° turns with 500ms duration)
+- "Stop"
+- "Beep" / "Turn on beeper"
+- "Turn on LED 1" / "Turn off LED 2"
+- "Play pirates" / "Play game of thrones" / "Play squid game"
+- "Do the special dance"
+
+### Joystick Controls
+
+- Drag the joystick to move in 8 directions + diagonals
+- Release to stop
+
+### Keyboard Controls
+
+- **Arrow Keys**: ↑↓←→ for movement
+- **WASD**: Alternative movement keys (case-insensitive)
+- **Combinations**: Press two keys for diagonal movement (e.g., W+A = forward-left)
+
+### Speed Control
+
+- **Slow (130)**: Default speed for safety
+- **Medium (180)**: Higher speed for faster movement
+- **Note**: Maximum speed is capped at 180 for safety
+
+## Architecture
 
 ```
+┌─────────────────────────────────────────┐
+│         Web Browser (React App)         │
+│  - Login Page                           │
+│  - Joystick Control                     │
+│  - Voice Command Input                  │
+│  - Speed Control Slider                 │
+│  - LED/Beeper Toggle Buttons            │
+│  - AI Response Display                  │
+└──────────────┬──────────────────────────┘
+               │ WebSocket
+               ▼
+┌─────────────────────────────────────────┐
+│       Node.js Backend (Express)         │
+│  - WebSocket Server                     │
+│  - Azure OpenAI/OpenAI Integration      │
+│  - Command Processing                   │
+│  - Session Management                   │
+└──────────────┬──────────────────────────┘
+               │ Serial/WiFi
+               ▼
+┌─────────────────────────────────────────┐
+│          ESP32 Microcontroller          │
+│  - WiFi Connection                      │
+│  - Command Parsing                      │
+│  - Motor Control (L298N)                │
+│  - LED Control                          │
+│  - Beeper/Melody Playback               │
+│  - Sensor Input                         │
+└─────────────────────────────────────────┘
+```
+
+## Supported Commands
+
+### Movement
+
+- `forward`, `backward`, `left`, `right`
+- `forward_left`, `forward_right`, `backward_left`, `backward_right`
+- `stop`
+- Turns automatically add 500ms duration
+
+### LEDs
+
+- Turn on/off LED 1 and LED 2
+
+### Beeper
+
+- Turn on/off with optional duration
+- Supports multiple melodies: Pirates, Game of Thrones, Squid Game
+
+### Special Dance
+
+- Choreographed sequence with movements, LEDs, and beeper
+- Uses moderate speeds (130-180) and short durations for safety
+
+## Speed Configuration
+
+- **Minimum Speed**: 130 (slow, safe movement)
+- **Medium Speed**: 180 (moderate movement)
+- **Maximum Speed**: 180 (capped for safety, even if user requests higher)
+
+## Azure OpenAI - Keyless Authentication
+
+For enhanced security, use Azure CLI authentication:
+
+```bash
+az login
+az account list --query "[?isDefault].id" -o tsv
+az ad signed-in-user show --query objectId -o tsv
 az role assignment create \
   --role "Cognitive Services OpenAI Contributor" \
   --assignee-object-id "<USER_PRINCIPAL_ID>" \
@@ -46,58 +186,41 @@ az role assignment create \
   --assignee-principal-type User
 ```
 
-Add your *subscription ID*, *resource group*, and user *principal ID* (assigness-object-id) to the command above. 
-- Run `az login` and select your target subscription.
-- Get your subscription ID by running `az account list --query "[?isDefault].id" -o tsv`.
-- Find your user principal ID by running `az ad signed-in-user show --query objectId -o tsv` or `az rest --method GET --url "https://graph.microsoft.com/v1.0/me" --query "id"`.
+Then remove `OPENAI_API_KEY` from `.env`
 
-You can then remove the `OPENAI_API_KEY` value your `.env` file.
+## PWA Installation
 
+The app is a Progressive Web App and can be installed on mobile devices:
 
-## Architecture Overview
+- **Mobile**: Tap "Add to Home Screen" or app menu
+- **Desktop**: Click install button in address bar
 
-The following diagram illustrates the WebSocket communication flow in the `RTSession` class, showing how client messages are processed and relayed to the OpenAI Realtime API.
+## Troubleshooting
 
-- **Client**: This is you—the user interacting with the app via your browser. It sends audio or text inputs (like saying “Hello” or typing a question) to kick things off. It’s written using Angular.
--  **RealTime Session**: The Node.js code where the main action takes place – it manages the flow. It uses a client WebSocket to receive your inputs and send back responses, while a RealTime AI WebSocket connects to the OpenAI API. The logic block processes messages, ensuring everything runs smoothly between the client and the AI.
--  **OpenAI RealTime API**: This is the brains of the operation. It receives audio/text from the Realtime Session, processes it with the gpt-4o-realtime model, and sends back audio/text responses. The app supports calling OpenAI or Azure OpenAI.
+- **Car not responding**: Check ESP32 WiFi connection and WebSocket server status
+- **Beeper not working after melody**: Firmware handles pin reset automatically
+- **Joystick conflicts**: Keyboard is disabled when joystick is in use
+- **Authentication loop**: Clear browser storage and login again
 
-```mermaid
-%%{init: {'flowchart': {'nodeSpacing': 50, 'rankSpacing': 75}}}%%
-graph TD
-    A[Client] -->|Sends audio/text| B[Client WebSocket]
-    subgraph Realtime_Session["Realtime Session"]
-        B[Client WebSocket]
-        C[Logic]
-        D[Realtime AI WebSocket]
-    end
-    E[OpenAI Realtime API]
+## File Structure
 
-    B <-->|Receives responses| C
-    C <-->|Processes messages| D
-    D <-->|Sends audio/text to Azure OpenAI| E
-    E -->|Sends audio/text responses| D
-
-    classDef sessionLabel font-size:20px;
-    class Realtime_Session sessionLabel
-
-    style A fill:#f9f,stroke:#333,stroke-width:2px,font-size:20px;
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#dfd,stroke:#333,stroke-width:2px
-    style D fill:#bbf,stroke:#333,stroke-width:2px
-    style E fill:#f9f,stroke:#333,stroke-width:2px
+```
+├── client/                  # React frontend
+│   ├── src/
+│   │   ├── components/      # UI components
+│   │   ├── hooks/           # Custom React hooks
+│   │   └── App.tsx          # Auth & Main app
+│   └── public/              # PWA manifest, icons, service worker
+├── server/                  # Node.js backend
+│   └── src/
+│       ├── server.ts        # Express server
+│       ├── session.ts       # WebSocket session management
+│       └── systemMessages.ts # AI prompts
+└── arduino/car/             # ESP32 firmware
+    ├── car.ino              # Main code
+    └── melodies.h           # Melody definitions
 ```
 
-## Acknowledgements
+## License
 
-Thanks to [Steve Sanderson](https://github.com/SteveSandersonMS) for the initial inspiration for this demo.
-
-## Getting Help
-
-If you get stuck or have any questions about building AI apps, join:
-
-[![Azure AI Foundry Discord](https://img.shields.io/badge/Discord-Azure_AI_Foundry_Community_Discord-blue?style=for-the-badge&logo=discord&color=5865f2&logoColor=fff)](https://aka.ms/foundry/discord)
-
-If you have product feedback or errors while building visit:
-
-[![Azure AI Foundry Developer Forum](https://img.shields.io/badge/GitHub-Azure_AI_Foundry_Developer_Forum-blue?style=for-the-badge&logo=github&color=000000&logoColor=fff)](https://aka.ms/foundry/forum)
+MIT
