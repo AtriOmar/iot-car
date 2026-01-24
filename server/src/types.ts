@@ -35,11 +35,7 @@ export type SystemMessageTool = {
 };
 
 export type SystemMessage = {
-  type:
-    | "language-coach"
-    | "medical-form"
-    | "medical-question-answer"
-    | "car-controller";
+  type: "car-controller";
   initialInstructions: string;
   message: string;
   tools?: SystemMessageTool[];
@@ -71,64 +67,36 @@ export type RateLimits = {
   reset_seconds: number;
 };
 
-// ==================== CAR CONTROL TYPES ====================
+// ==================== COMPACT COMMAND PROTOCOL ====================
+/*
+ * Compact array format: [msg, type, ...params]
+ *
+ * Type codes: 1=move, 2=led, 3=beep, 4=play
+ *
+ * Move (type=1): [msg, 1, action, speed, duration?]
+ *   Actions: 0=stop, 1=forward, 2=backward, 3=left, 4=right, 5=fl, 6=fr, 7=bl, 8=br
+ *
+ * LED (type=2): [msg, 2, led_num, on_off]
+ *
+ * Beep (type=3): [msg, 3, on_off, duration?]
+ *
+ * Play (type=4): [msg, 4, song]
+ *   Songs: 0=stop, 1=pirates, 2=got, 3=squid
+ */
+export type CompactCommand = (string | number)[];
 
-export type CarMoveAction =
-  | "forward"
-  | "backward"
-  | "left"
-  | "right"
-  | "forward_left"
-  | "forward_right"
-  | "backward_left"
-  | "backward_right"
-  | "stop";
-export type CarToggleAction = "on" | "off";
-export type CarLedId = 1 | 2;
-export type CarPlayAction = "pirates" | "got" | "squid" | "stop";
-
-export type CarMoveCommand = {
-  type: "move";
-  action: CarMoveAction;
-  speed?: number; // 130 (slow), 180 (medium), 255 (fast), defaults to 130
-  duration?: number; // milliseconds, null = indefinite until stop
-};
-
-export type CarBeepCommand = {
-  type: "beep";
-  action: CarToggleAction;
-  duration?: number; // milliseconds, null = indefinite until off
-};
-
-export type CarLedCommand = {
-  type: "led";
-  led: CarLedId;
-  action: CarToggleAction;
-};
-
-export type CarPlayCommand = {
-  type: "play";
-  action: CarPlayAction; // "pirates" for Pirates of the Caribbean, "stop" to stop melody
-};
-
-export type CarCommand =
-  | CarMoveCommand
-  | CarBeepCommand
-  | CarLedCommand
-  | CarPlayCommand;
-
-export type CarCommandSequence = {
-  commands: CarCommand[];
+export type CompactCommandMessage = {
+  c: CompactCommand[];
 };
 
 // Message from frontend to directly control car (bypasses AI)
 export type CarDirectControl = {
   type: "car_direct_control";
-  commands: CarCommand[];
+  c: CompactCommand[];
 };
 
-// Message sent to ESP32
+// Message sent to ESP32 (compact format)
 export type CarControlMessage = {
   type: "car_control";
-  commands: CarCommand[];
+  c: CompactCommand[];
 };

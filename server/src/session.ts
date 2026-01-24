@@ -10,10 +10,10 @@ import {
   WSMessage,
   OpenAIError,
   RateLimits,
-  CarCommand,
+  CompactCommand,
 } from "./types.js";
 import { AzureOpenAI } from "openai";
-import { broadcastToCarDevices } from "./server.js";
+import { broadcastCompactCommands } from "./server.js";
 config({ path: "../.env" });
 
 const {
@@ -744,15 +744,24 @@ export class RTSession {
       if (name === "send_car_commands") {
         try {
           const parsedArgs = JSON.parse(args);
-          const commands: CarCommand[] = parsedArgs.commands || [];
+
+          // Compact format only: { c: [[...], [...], ...] }
+          if (!parsedArgs.c || !Array.isArray(parsedArgs.c)) {
+            this.logger.error(
+              { call_id, parsedArgs },
+              "🔥 Invalid car command format - expected compact format with 'c' array",
+            );
+            return;
+          }
+
+          const compactCommands: CompactCommand[] = parsedArgs.c;
 
           this.logger.info(
-            { call_id, commands, message: parsedArgs.message },
-            "🚗 Processing car control commands from AI",
+            { call_id, compactCommands },
+            "🚗 Processing compact car commands from AI",
           );
 
-          // Broadcast commands to connected ESP32 devices
-          const sentCount = broadcastToCarDevices(commands);
+          const sentCount = broadcastCompactCommands(compactCommands);
 
           // Send acknowledgment back to OpenAI (without triggering new response to avoid infinite loop)
           this.openAIWs.send(
@@ -764,7 +773,6 @@ export class RTSession {
                 output: JSON.stringify({
                   success: sentCount > 0,
                   devices_reached: sentCount,
-                  commands_sent: commands.length,
                 }),
               },
             }),

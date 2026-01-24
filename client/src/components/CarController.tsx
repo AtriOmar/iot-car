@@ -4,7 +4,34 @@ import { JoystickControl } from "./JoystickControl";
 import type { JoystickDirection } from "./JoystickControl";
 import { SpeedSlider } from "./SpeedSlider";
 import { AiResponseBox } from "./AiResponseBox";
-import type { CarCommand } from "../types";
+import {
+  CMD_MOVE,
+  CMD_LED,
+  CMD_BEEP,
+  ACT_STOP,
+  ACT_FORWARD,
+  ACT_BACKWARD,
+  ACT_LEFT,
+  ACT_RIGHT,
+  ACT_FORWARD_LEFT,
+  ACT_FORWARD_RIGHT,
+  ACT_BACKWARD_LEFT,
+  ACT_BACKWARD_RIGHT,
+} from "../types";
+import type { CompactCommand } from "../types";
+
+// Map joystick directions to action codes
+const DIRECTION_TO_ACTION: Record<JoystickDirection, number> = {
+  forward: ACT_FORWARD,
+  backward: ACT_BACKWARD,
+  left: ACT_LEFT,
+  right: ACT_RIGHT,
+  forward_left: ACT_FORWARD_LEFT,
+  forward_right: ACT_FORWARD_RIGHT,
+  backward_left: ACT_BACKWARD_LEFT,
+  backward_right: ACT_BACKWARD_RIGHT,
+  stop: ACT_STOP,
+};
 
 export function CarController() {
   const {
@@ -31,58 +58,51 @@ export function CarController() {
     currentSpeedRef.current = speed;
   }, []);
 
-  // Handle joystick movement
+  // Handle joystick movement - compact format: [msg, 1, action, speed]
   const handleJoystickMove = useCallback(
     (direction: JoystickDirection) => {
-      const command: CarCommand = {
-        type: "move",
-        action: direction,
-        speed: currentSpeedRef.current,
-      };
+      const action = DIRECTION_TO_ACTION[direction];
+      const msg = direction.charAt(0); // Short message: f, b, l, r, etc.
+      const command: CompactCommand = [
+        msg,
+        CMD_MOVE,
+        action,
+        currentSpeedRef.current,
+      ];
       sendCarCommand([command]);
     },
     [sendCarCommand],
   );
 
+  // Handle joystick stop - compact format: [msg, 1, 0]
   const handleJoystickStop = useCallback(() => {
-    const command: CarCommand = {
-      type: "move",
-      action: "stop",
-    };
+    const command: CompactCommand = ["stp", CMD_MOVE, ACT_STOP];
     sendCarCommand([command]);
   }, [sendCarCommand]);
 
-  // Handle beep toggle
+  // Handle beep toggle - compact format: [msg, 3, on_off]
   const handleBeepToggle = useCallback(() => {
     const newState = !isBeeping;
     setIsBeeping(newState);
-    const command: CarCommand = {
-      type: "beep",
-      action: newState ? "on" : "off",
-    };
+    const msg = newState ? "beep" : "beep-";
+    const command: CompactCommand = [msg, CMD_BEEP, newState ? 1 : 0];
     sendCarCommand([command]);
   }, [isBeeping, sendCarCommand]);
 
-  // Handle LED toggles
+  // Handle LED toggles - compact format: [msg, 2, led_num, on_off]
   const handleLed1Toggle = useCallback(() => {
     const newState = !led1On;
     setLed1On(newState);
-    const command: CarCommand = {
-      type: "led",
-      led: 1,
-      action: newState ? "on" : "off",
-    };
+    const msg = newState ? "led1+" : "led1-";
+    const command: CompactCommand = [msg, CMD_LED, 1, newState ? 1 : 0];
     sendCarCommand([command]);
   }, [led1On, sendCarCommand]);
 
   const handleLed2Toggle = useCallback(() => {
     const newState = !led2On;
     setLed2On(newState);
-    const command: CarCommand = {
-      type: "led",
-      led: 2,
-      action: newState ? "on" : "off",
-    };
+    const msg = newState ? "led2+" : "led2-";
+    const command: CompactCommand = [msg, CMD_LED, 2, newState ? 1 : 0];
     sendCarCommand([command]);
   }, [led2On, sendCarCommand]);
 

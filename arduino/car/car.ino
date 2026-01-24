@@ -26,10 +26,10 @@ const char *WIFI_SSID = "Atri";
 const char *WIFI_PASSWORD = "omar1234";
 
 // WebSocket Server Configuration
-const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
-const uint16_t WS_PORT = 50005;
-// const char *WS_HOST = "192.168.43.9"; // Your server IP address
-// const uint16_t WS_PORT = 8080;
+// const char *WS_HOST = "car.api.omaratri.com"; // Your server IP address
+// const uint16_t WS_PORT = 50005;
+const char *WS_HOST = "192.168.43.9"; // Your server IP address
+const uint16_t WS_PORT = 8080;
 const char *WS_PATH = "/realtime";
 
 // Car ID for registration
@@ -72,15 +72,64 @@ struct CommandState
 } commandState = {false, false, 0, 0, "", 200};
 
 // Command queue for sequential execution
+// Uses compact numeric codes for efficiency
 struct QueuedCommand
 {
-  String type;
-  String action;
-  int speed;
-  int led;
+  int cmdType; // 1=move, 2=led, 3=beep, 4=play
+  int action;  // Depends on type (see below)
+  int speed;   // For move commands
+  int led;     // For LED commands (1 or 2)
   unsigned long duration;
   bool hasDuration;
 };
+
+/*
+ * COMPACT COMMAND PROTOCOL
+ *
+ * Commands are arrays: [msg, type, ...params]
+ *
+ * Type codes:
+ *   1 = move
+ *   2 = led
+ *   3 = beep
+ *   4 = play
+ *
+ * Move action codes (type=1): [msg, 1, action, speed, duration?]
+ *   0=stop, 1=forward, 2=backward, 3=left, 4=right
+ *   5=forward_left, 6=forward_right, 7=backward_left, 8=backward_right
+ *
+ * LED (type=2): [msg, 2, led_num, on_off]
+ *   on_off: 1=on, 0=off
+ *
+ * Beep (type=3): [msg, 3, on_off, duration?]
+ *   on_off: 1=on, 0=off
+ *
+ * Play (type=4): [msg, 4, song]
+ *   Songs: 0=stop, 1=pirates, 2=got, 3=squid
+ */
+
+// Type codes
+const int CMD_MOVE = 1;
+const int CMD_LED = 2;
+const int CMD_BEEP = 3;
+const int CMD_PLAY = 4;
+
+// Move action codes
+const int ACT_STOP = 0;
+const int ACT_FORWARD = 1;
+const int ACT_BACKWARD = 2;
+const int ACT_LEFT = 3;
+const int ACT_RIGHT = 4;
+const int ACT_FORWARD_LEFT = 5;
+const int ACT_FORWARD_RIGHT = 6;
+const int ACT_BACKWARD_LEFT = 7;
+const int ACT_BACKWARD_RIGHT = 8;
+
+// Play action codes
+const int PLAY_STOP = 0;
+const int PLAY_PIRATES = 1;
+const int PLAY_GOT = 2;
+const int PLAY_SQUID = 3;
 
 const int MAX_QUEUE_SIZE = 20;
 QueuedCommand commandQueue[MAX_QUEUE_SIZE];
@@ -342,10 +391,6 @@ void processMessage(const char *payload)
 
   if (strcmp(msgType, "car_control") == 0)
   {
-    JsonArray commands = doc["commands"];
-
-    Serial.printf("Received %d commands\n", commands.size());
-
     // Clear existing queue
     queueHead = 0;
     queueTail = 0;
@@ -356,21 +401,78 @@ void processMessage(const char *payload)
     commandState.moveActive = false;
     commandState.moveEndTime = 0;
 
-    // Queue all commands
-    for (JsonObject cmd : commands)
+    // Compact format only: { "c": [[...], [...], ...] }
+    if (!doc.containsKey("c"))
     {
+      Serial.println("Error: Missing 'c' array in car_control message");
+      return;
+    }
+
+    JsonArray compactCommands = doc["c"];
+    Serial.printf("Received %d compact commands\n", compactCommands.size());
+
+    for (JsonArray cmd : compactCommands)
+    {
+      if (cmd.size() < 2)
+        continue;
+
+      // Format: [msg, type, ...params]
+      // msg is at index 0 (string, for display only)
+      int cmdType = cmd[1].as<int>();
+
       QueuedCommand qCmd;
-      qCmd.type = cmd["type"].as<String>();
-      qCmd.action = cmd["action"].as<String>();
-      qCmd.speed = cmd["speed"] | 200; // Default speed 200
-      qCmd.led = cmd["led"] | 1;
-      qCmd.duration = cmd["duration"] | 0;
-      qCmd.hasDuration = cmd.containsKey("duration");
+      qCmd.cmdType = cmdType;
+      qCmd.action = 0;
+      qCmd.speed = 130;
+      qCmd.led = 1;
+      qCmd.duration = 0;
+      qCmd.hasDuration = false;
+
+      switch (cmdType)
+      {
+      case CMD_MOVE:
+        // [msg, 1, action, speed, duration?]
+        qCmd.action = cmd[2].as<int>();
+        qCmd.speed = cmd.size() > 3 ? cmd[3].as<int>() : 130;
+        if (cmd.size() > 4)
+        {
+          qCmd.duration = cmd[4].as<unsigned long>();
+          qCmd.hasDuration = true;
+        }
+        Serial.printf("  Queued MOVE: action=%d, speed=%d, dur=%lu\n",
+                      qCmd.action, qCmd.speed, qCmd.duration);
+        break;
+
+      case CMD_LED:
+        // [msg, 2, led_num, on_off]
+        qCmd.led = cmd[2].as<int>();
+        qCmd.action = cmd[3].as<int>(); // 1=on, 0=off
+        Serial.printf("  Queued LED: led=%d, on=%d\n", qCmd.led, qCmd.action);
+        break;
+
+      case CMD_BEEP:
+        // [msg, 3, on_off, duration?]
+        qCmd.action = cmd[2].as<int>(); // 1=on, 0=off
+        if (cmd.size() > 3)
+        {
+          qCmd.duration = cmd[3].as<unsigned long>();
+          qCmd.hasDuration = true;
+        }
+        Serial.printf("  Queued BEEP: on=%d, dur=%lu\n", qCmd.action, qCmd.duration);
+        break;
+
+      case CMD_PLAY:
+        // [msg, 4, song]
+        qCmd.action = cmd[2].as<int>(); // 0=stop, 1=pirates, 2=got, 3=squid
+        Serial.printf("  Queued PLAY: song=%d\n", qCmd.action);
+        break;
+
+      default:
+        Serial.printf("  Unknown command type: %d\n", cmdType);
+        continue;
+      }
 
       enqueueCommand(qCmd);
-
-      Serial.printf("  Queued: type=%s, action=%s, speed=%d, duration=%lu\n",
-                    qCmd.type.c_str(), qCmd.action.c_str(), qCmd.speed, qCmd.duration);
     }
 
     // Start processing queue
@@ -412,45 +514,40 @@ void processCommandQueue()
 
   while (dequeueCommand(cmd))
   {
-    Serial.printf("Executing: type=%s, action=%s\n", cmd.type.c_str(), cmd.action.c_str());
+    Serial.printf("Executing: type=%d, action=%d\n", cmd.cmdType, cmd.action);
 
-    if (cmd.type == "move")
+    switch (cmd.cmdType)
     {
-      // Execute move command
-      if (cmd.action == "forward")
+    case CMD_MOVE:
+      // Execute move command using action code
+      switch (cmd.action)
       {
+      case ACT_FORWARD:
         moveForward(cmd.speed);
-      }
-      else if (cmd.action == "backward")
-      {
+        break;
+      case ACT_BACKWARD:
         moveBackward(cmd.speed);
-      }
-      else if (cmd.action == "left")
-      {
+        break;
+      case ACT_LEFT:
         turnLeft(cmd.speed);
-      }
-      else if (cmd.action == "right")
-      {
+        break;
+      case ACT_RIGHT:
         turnRight(cmd.speed);
-      }
-      else if (cmd.action == "forward_left")
-      {
+        break;
+      case ACT_FORWARD_LEFT:
         moveForwardLeft(cmd.speed);
-      }
-      else if (cmd.action == "forward_right")
-      {
+        break;
+      case ACT_FORWARD_RIGHT:
         moveForwardRight(cmd.speed);
-      }
-      else if (cmd.action == "backward_left")
-      {
+        break;
+      case ACT_BACKWARD_LEFT:
         moveBackwardLeft(cmd.speed);
-      }
-      else if (cmd.action == "backward_right")
-      {
+        break;
+      case ACT_BACKWARD_RIGHT:
         moveBackwardRight(cmd.speed);
-      }
-      else if (cmd.action == "stop")
-      {
+        break;
+      case ACT_STOP:
+      default:
         stopMotors();
         commandState.moveActive = false;
         commandState.moveEndTime = 0;
@@ -470,10 +567,10 @@ void processCommandQueue()
         commandState.moveEndTime = 0; // Indefinite movement
         // Continue to next command (might be beep or LED)
       }
-    }
-    else if (cmd.type == "beep")
-    {
-      if (cmd.action == "on")
+      break;
+
+    case CMD_BEEP:
+      if (cmd.action == 1) // on
       {
         setBeeper(true);
         commandState.beepActive = true;
@@ -489,24 +586,40 @@ void processCommandQueue()
           commandState.beepEndTime = 0; // Indefinite beeping
         }
       }
-      else if (cmd.action == "off")
+      else // off
       {
         setBeeper(false);
         commandState.beepActive = false;
         commandState.beepEndTime = 0;
       }
-      // Continue to next command (LEDs and beeps are non-blocking)
-    }
-    else if (cmd.type == "led")
-    {
-      setLED(cmd.led, cmd.action == "on");
+      // Continue to next command (beeps are non-blocking)
+      break;
+
+    case CMD_LED:
+      setLED(cmd.led, cmd.action == 1);
       // Continue to next command (LEDs are non-blocking)
-    }
-    else if (cmd.type == "play")
-    {
-      // Play a melody
-      playSong(cmd.action.c_str());
+      break;
+
+    case CMD_PLAY:
+      // Play a melody using song code
+      switch (cmd.action)
+      {
+      case PLAY_PIRATES:
+        playSong("pirates");
+        break;
+      case PLAY_GOT:
+        playSong("got");
+        break;
+      case PLAY_SQUID:
+        playSong("squid");
+        break;
+      case PLAY_STOP:
+      default:
+        playSong("stop");
+        break;
+      }
       // Continue to next command (melody plays in background)
+      break;
     }
   }
 

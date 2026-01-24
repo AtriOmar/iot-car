@@ -1,37 +1,43 @@
-// Car command types (matching server types)
-export type CarMoveAction =
-  | "forward"
-  | "backward"
-  | "left"
-  | "right"
-  | "forward_left"
-  | "forward_right"
-  | "backward_left"
-  | "backward_right"
-  | "stop";
-export type CarToggleAction = "on" | "off";
-export type CarLedId = 1 | 2;
+// ==================== COMPACT COMMAND PROTOCOL ====================
+/*
+ * Compact array format: [msg, type, ...params]
+ *
+ * Type codes: 1=move, 2=led, 3=beep, 4=play
+ *
+ * Move (type=1): [msg, 1, action, speed, duration?]
+ *   Actions: 0=stop, 1=forward, 2=backward, 3=left, 4=right, 5=fl, 6=fr, 7=bl, 8=br
+ *
+ * LED (type=2): [msg, 2, led_num, on_off]
+ *
+ * Beep (type=3): [msg, 3, on_off, duration?]
+ *
+ * Play (type=4): [msg, 4, song]
+ *   Songs: 0=stop, 1=pirates, 2=got, 3=squid
+ */
+export type CompactCommand = (string | number)[];
 
-export type CarMoveCommand = {
-  type: "move";
-  action: CarMoveAction;
-  speed?: number;
-  duration?: number;
-};
+// Command type codes
+export const CMD_MOVE = 1;
+export const CMD_LED = 2;
+export const CMD_BEEP = 3;
+export const CMD_PLAY = 4;
 
-export type CarBeepCommand = {
-  type: "beep";
-  action: CarToggleAction;
-  duration?: number;
-};
+// Move action codes
+export const ACT_STOP = 0;
+export const ACT_FORWARD = 1;
+export const ACT_BACKWARD = 2;
+export const ACT_LEFT = 3;
+export const ACT_RIGHT = 4;
+export const ACT_FORWARD_LEFT = 5;
+export const ACT_FORWARD_RIGHT = 6;
+export const ACT_BACKWARD_LEFT = 7;
+export const ACT_BACKWARD_RIGHT = 8;
 
-export type CarLedCommand = {
-  type: "led";
-  led: CarLedId;
-  action: CarToggleAction;
-};
-
-export type CarCommand = CarMoveCommand | CarBeepCommand | CarLedCommand;
+// Play action codes
+export const PLAY_STOP = 0;
+export const PLAY_PIRATES = 1;
+export const PLAY_GOT = 2;
+export const PLAY_SQUID = 3;
 
 // WebSocket message types
 export type WebSocketMessage = {
@@ -60,8 +66,7 @@ export type WSTextDeltaMessage = {
 export type AIResponse = {
   id: string;
   text: string;
-  message?: string;
-  commands?: CarCommand[];
+  compactCommands?: CompactCommand[];
   timestamp: Date;
 };
 

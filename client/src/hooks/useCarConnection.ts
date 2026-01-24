@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import type { CarCommand, ConnectionState, AIResponse } from "../types";
+import type { CompactCommand, ConnectionState, AIResponse } from "../types";
 
 const WS_URL =
   (import.meta.env.VITE_WS_URL as string) || "ws://localhost:8080/realtime";
@@ -74,6 +74,8 @@ export function useCarConnection() {
 
   // Handle incoming messages
   const handleMessage = useCallback((message: any) => {
+    console.log("-------------------- message --------------------");
+    console.log(message);
     switch (message.type) {
       case "control":
         if (message.action === "session_created") {
@@ -87,14 +89,27 @@ export function useCarConnection() {
             const params = JSON.parse(message.functionCallParams);
             const response: AIResponse = {
               id: message.id || Date.now().toString(),
-              text: params.message || "",
-              message: params.message || "",
-              commands: params.commands || [],
+              text: "",
+              compactCommands: params.c || [],
               timestamp: new Date(),
             };
             setAiResponses((prev) => [...prev.slice(-9), response]); // Keep last 10
           } catch (e) {
             console.error("Failed to parse function call params:", e);
+          }
+        } else if (message.action === "text_done") {
+          // Finalize text message when server signals completion
+          const finalText = currentTextRef.current.get(message.id);
+          if (finalText) {
+            setAiResponses((prev) => [
+              ...prev.slice(-9),
+              {
+                id: message.id,
+                text: finalText,
+                timestamp: new Date(),
+              },
+            ]);
+            currentTextRef.current.delete(message.id);
           }
         } else if (message.action === "error") {
           console.error("Server error:", message.error);
@@ -105,22 +120,6 @@ export function useCarConnection() {
         // Accumulate text deltas
         const currentText = currentTextRef.current.get(message.id) || "";
         currentTextRef.current.set(message.id, currentText + message.delta);
-        break;
-
-      case "text_done":
-        // Finalize text message
-        const finalText = currentTextRef.current.get(message.id);
-        if (finalText) {
-          setAiResponses((prev) => [
-            ...prev.slice(-9),
-            {
-              id: message.id,
-              text: finalText,
-              timestamp: new Date(),
-            },
-          ]);
-          currentTextRef.current.delete(message.id);
-        }
         break;
     }
   }, []);
@@ -134,17 +133,18 @@ export function useCarConnection() {
     setAiResponses([]);
   }, []);
 
-  // Send direct car control command
-  const sendCarCommand = useCallback((commands: CarCommand[]) => {
+  // Send direct car control command (compact format)
+  const sendCarCommand = useCallback((commands: CompactCommand[]) => {
     if (socketRef.current?.readyState !== WebSocket.OPEN) {
       console.warn("WebSocket not connected");
       return;
     }
 
+    console.log("🎮 Sending car command:", commands);
     socketRef.current.send(
       JSON.stringify({
         type: "car_direct_control",
-        commands,
+        c: commands,
       }),
     );
   }, []);

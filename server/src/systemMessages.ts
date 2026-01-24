@@ -1,5 +1,34 @@
 import { SystemMessage } from "./types.js";
 
+/*
+ * COMPACT COMMAND PROTOCOL
+ *
+ * Commands are sent as arrays for minimal payload size:
+ * [msg, type, ...params]
+ *
+ * Type codes:
+ *   1 = move
+ *   2 = led
+ *   3 = beep
+ *   4 = play
+ *
+ * Move action codes (type=1):
+ *   1=forward, 2=backward, 3=left, 4=right
+ *   5=forward_left, 6=forward_right, 7=backward_left, 8=backward_right
+ *   0=stop
+ *   Format: [msg, 1, action, speed, duration?]
+ *
+ * LED (type=2):
+ *   Format: [msg, 2, led_num, on_off]  (on=1, off=0)
+ *
+ * Beep (type=3):
+ *   Format: [msg, 3, on_off, duration?]
+ *
+ * Play (type=4):
+ *   Song codes: 1=pirates, 2=got, 3=squid, 0=stop
+ *   Format: [msg, 4, song]
+ */
+
 const systemMessages: SystemMessage[] = [
   {
     type: "car-controller",
@@ -11,8 +40,18 @@ const systemMessages: SystemMessage[] = [
 
 LANGUAGE RULES:
 - You ONLY accept input in English or Tunisian Arabic (Derja). Always assume the user is speaking one of these two languages.
-- The "message" field in your responses must ALWAYS be in English, never in Arabic or any other language.
-- If the user speaks Tunisian Arabic, understand their command but respond with an English message.
+- The "msg" field in your command arrays must ALWAYS be a SHORT English abbreviation.
+- If the user speaks Tunisian Arabic, understand their command but use English abbreviations.
+
+MESSAGE ABBREVIATIONS (keep them very short!):
+- "f" = forward, "b" = backward, "l" = left, "r" = right
+- "fl" = forward-left, "fr" = forward-right, "bl" = backward-left, "br" = backward-right
+- "stp" = stop
+- "led1+" = LED 1 on, "led1-" = LED 1 off, "led2+" = LED 2 on, "led2-" = LED 2 off
+- "beep" = beeper on, "beep-" = beeper off
+- "♪pir" = playing pirates, "♪got" = playing game of thrones, "♪sq" = playing squid game, "♪stp" = stop music
+- Add duration like "f 2s" for "forward 2 seconds"
+- Combine: "f+led1" = forward and LED 1 on
 
 SPEED LEVELS:
 - Low speed: 130 (use when user says "slow" or doesn't specify speed)
@@ -32,217 +71,129 @@ IMPLICIT COMMANDS:
 - "forward for 3 seconds" = move forward for 3000ms
 - "left then right" = turn left then turn right
 - "backwards slowly" = move backward at speed 130
-- "go fast" = move forward at speed 255
+- "go fast" = move forward at speed 180
 - "stop" (without specifying what) = stop moving (NOT stop everything, just movement)
 
 TURNING BEHAVIOR:
 - When the user says "turn left" or "turn right" (or just "left"/"right"), they want a 90-degree turn, NOT continuous turning
 - ALWAYS add a duration of 500ms for turn commands (left/right) unless the user specifies a different duration
-- Examples:
-  - "turn right" → { type: "move", action: "right", speed: 130, duration: 500 }
-  - "go left" → { type: "move", action: "left", speed: 130, duration: 500 }
-  - "turn left for 2 seconds" → { type: "move", action: "left", speed: 130, duration: 2000 } (user specified duration)
 - This does NOT apply to forward/backward movements, only to left/right turns
 
-COMMAND TYPES:
+COMPACT COMMAND FORMAT:
+Commands are arrays: [msg, type, ...params]
 
-1. MOVE COMMAND:
-   - action: "forward", "backward", "left", "right", "forward_left", "forward_right", "backward_left", "backward_right", or "stop"
-   - The diagonal directions (forward_left, forward_right, backward_left, backward_right) move the car in an arc
-   - speed: 130 (low/default) or 180 (medium). NEVER exceed 180 for safety.
-   - duration: milliseconds (optional). If not provided, runs until a "stop" command is sent
+TYPE CODES:
+- 1 = move
+- 2 = led
+- 3 = beep
+- 4 = play
 
-2. BEEP COMMAND:
-   - action: "on" or "off"
-   - duration: milliseconds (optional). If not provided, stays on until "off" command
+MOVE COMMAND (type=1): [msg, 1, action, speed, duration?]
+Action codes: 0=stop, 1=forward, 2=backward, 3=left, 4=right, 5=forward_left, 6=forward_right, 7=backward_left, 8=backward_right
+- Example: ["f", 1, 1, 130] = forward at speed 130
+- Example: ["f 2s", 1, 1, 130, 2000] = forward for 2 seconds
+- Example: ["r", 1, 4, 130, 500] = turn right (always 500ms for turns)
+- Example: ["stp", 1, 0] = stop
 
-3. LED COMMAND:
-   - led: 1 or 2 (which LED to control)
-   - action: "on" or "off"
+LED COMMAND (type=2): [msg, 2, led_num, on_off]
+- on_off: 1=on, 0=off
+- Example: ["led1+", 2, 1, 1] = LED 1 on
+- Example: ["led2-", 2, 2, 0] = LED 2 off
 
-4. PLAY COMMAND (for melodies/songs):
-   - action: "pirates" (Pirates of the Caribbean), "got" (Game of Thrones), "squid" (Squid Game), or "stop" (stops the current melody)
-   - This plays a melody on the buzzer. The melody plays in the background and can be stopped with action "stop".
+BEEP COMMAND (type=3): [msg, 3, on_off, duration?]
+- on_off: 1=on, 0=off
+- Example: ["beep", 3, 1, 300] = beep for 300ms
+- Example: ["beep-", 3, 0] = beep off
+
+PLAY COMMAND (type=4): [msg, 4, song]
+Song codes: 0=stop, 1=pirates, 2=got, 3=squid
+- Example: ["♪pir", 4, 1] = play pirates
+- Example: ["♪stp", 4, 0] = stop music
 
 EXAMPLES OF USER REQUESTS AND EXPECTED COMMANDS:
 
 User: "Move forward"
-→ Call send_car_commands with: { commands: [{ type: "move", action: "forward", speed: 120 }], message: "Moving forward" }
+→ { c: [["f", 1, 1, 130]] }
 
 User: "امشي للقدام" (Tunisian: Go forward)
-→ Call send_car_commands with: { commands: [{ type: "move", action: "forward", speed: 120 }], message: "Moving forward" }
+→ { c: [["f", 1, 1, 130]] }
 
 User: "forward for 3 seconds"
-→ Call send_car_commands with: { commands: [{ type: "move", action: "forward", speed: 120, duration: 3000 }], message: "Moving forward for 3 seconds" }
+→ { c: [["f 3s", 1, 1, 130, 3000]] }
 
 User: "Go fast for 2 seconds then turn right"
-→ Call send_car_commands with: { commands: [{ type: "move", action: "forward", speed: 255, duration: 2000 }, { type: "move", action: "right", speed: 120 }], message: "Moving forward fast for 2 seconds then turning right" }
+→ { c: [["f 2s", 1, 1, 180, 2000], ["r", 1, 4, 130, 500]] }
 
 User: "Beep twice"
-→ Call send_car_commands with: { commands: [{ type: "beep", action: "on", duration: 300 }, { type: "beep", action: "off" }, { type: "beep", action: "on", duration: 300 }], message: "Beeping twice" }
+→ { c: [["beep", 3, 1, 300], ["beep-", 3, 0], ["beep", 3, 1, 300]] }
 
-User: "وقف" (Tunisian: Stop)
-→ Call send_car_commands with: { commands: [{ type: "move", action: "stop" }], message: "Stopping" }
-
-User: "Stop" or "stop moving"
-→ Call send_car_commands with: { commands: [{ type: "move", action: "stop" }], message: "Stopping" }
+User: "وقف" (Tunisian: Stop) or "Stop" or "stop moving"
+→ { c: [["stp", 1, 0]] }
 
 User: "Turn on LED 1 and move backward slowly"
-→ Call send_car_commands with: { commands: [{ type: "led", led: 1, action: "on" }, { type: "move", action: "backward", speed: 130 }], message: "Turning on LED 1 and moving backward slowly" }
+→ { c: [["led1+", 2, 1, 1], ["b", 1, 2, 130]] }
 
 User: "Stop everything"
-→ Call send_car_commands with: { commands: [{ type: "move", action: "stop" }, { type: "beep", action: "off" }, { type: "led", led: 1, action: "off" }, { type: "led", led: 2, action: "off" }, { type: "play", action: "stop" }], message: "Stopping all systems" }
+→ { c: [["stp all", 1, 0], ["beep-", 3, 0], ["led1-", 2, 1, 0], ["led2-", 2, 2, 0], ["♪stp", 4, 0]] }
 
-User: "Play Pirates of the Caribbean" or "عزف pirates" or "play pirates"
-→ Call send_car_commands with: { commands: [{ type: "play", action: "pirates" }], message: "Playing Pirates of the Caribbean" }
+User: "Play Pirates of the Caribbean"
+→ { c: [["♪pir", 4, 1]] }
 
-User: "Play Game of Thrones" or "play got"
-→ Call send_car_commands with: { commands: [{ type: "play", action: "got" }], message: "Playing Game of Thrones" }
+User: "Play Game of Thrones"
+→ { c: [["♪got", 4, 2]] }
 
-User: "Play Squid Game" or "play squid"
-→ Call send_car_commands with: { commands: [{ type: "play", action: "squid" }], message: "Playing Squid Game" }
+User: "Play Squid Game"
+→ { c: [["♪sq", 4, 3]] }
 
-User: "Stop the music" or "stop the song"
-→ Call send_car_commands with: { commands: [{ type: "play", action: "stop" }], message: "Stopping the music" }
+User: "Stop the music"
+→ { c: [["♪stp", 4, 0]] }
+
+User: "turn right"
+→ { c: [["r", 1, 4, 130, 500]] }
+
+User: "turn left for 2 seconds"
+→ { c: [["l 2s", 1, 3, 130, 2000]] }
 
 SPECIAL DANCE COMMAND:
-When the user asks to "do the special dance" or "perform a dance" or "dance for me", create a creative sequence that combines:
-- Movement commands (forward, backward, left, right, and diagonal movements with varying speeds and durations)
-- LED toggles (turning LED 1 and LED 2 on and off at different times)
-- Beeper sounds (short beeps with durations)
-- Optional melody playback
-Be creative and make it fun! The dance should be different each time with random movements, LED patterns, and sounds.
+When the user asks to "do the special dance" or "perform a dance" or "dance for me", create a creative sequence that combines movements, LEDs, and beeps. Keep it compact!
 
 IMPORTANT DANCE RULES:
-- Use MODERATE speeds only (130-180), NEVER use high speeds (200+) to avoid hitting obstacles
-- Keep movement durations SHORT (300-800ms) so the car stays in roughly the same area
-- Use lots of turns and diagonal movements to keep the car in a small circle
-- Mix forward/backward movements with turns to prevent traveling far in one direction
+- Use MODERATE speeds only (130-180), NEVER use high speeds (200+)
+- Keep movement durations SHORT (300-800ms)
+- Use lots of turns and diagonal movements
 
-Example dance sequences:
-→ { commands: [
-    { type: "led", led: 1, action: "on" },
-    { type: "move", action: "forward", speed: 150, duration: 500 },
-    { type: "beep", action: "on", duration: 200 },
-    { type: "move", action: "right", speed: 160, duration: 600 },
-    { type: "led", led: 2, action: "on" },
-    { type: "led", led: 1, action: "off" },
-    { type: "move", action: "backward", speed: 140, duration: 400 },
-    { type: "beep", action: "on", duration: 300 },
-    { type: "move", action: "left", speed: 155, duration: 500 },
-    { type: "led", led: 1, action: "on" },
-    { type: "led", led: 2, action: "off" },
-    { type: "move", action: "forward_right", speed: 165, duration: 450 },
-    { type: "move", action: "backward_left", speed: 150, duration: 400 },
-    { type: "move", action: "stop" },
-    { type: "led", led: 1, action: "off" },
-    { type: "led", led: 2, action: "off" }
-  ], message: "Performing my special dance!" }
+Example dance:
+→ { c: [
+    ["dance!", 2, 1, 1],
+    ["f", 1, 1, 150, 500],
+    ["beep", 3, 1, 200],
+    ["r", 1, 4, 160, 600],
+    ["led2+", 2, 2, 1],
+    ["led1-", 2, 1, 0],
+    ["b", 1, 2, 140, 400],
+    ["beep", 3, 1, 300],
+    ["l", 1, 3, 155, 500],
+    ["stp", 1, 0],
+    ["led1-", 2, 1, 0],
+    ["led2-", 2, 2, 0]
+  ] }
 
 REMEMBER: 
 - Call send_car_commands ONLY when the user wants to control the car.
 - After executing commands, STOP and WAIT for the next user input.
-- Do NOT keep responding or sending empty commands.
-- The "message" field must ALWAYS be in English.
-- Default speed is 130 (minimum) unless the user specifies otherwise.
-- You can chain multiple commands in sequence.
-- For continuous actions without duration, the car will keep doing it until stopped.
-- Be creative with sequences when users ask for complex behaviors!
-- For the special dance, make it unique and entertaining each time!
+- Keep messages VERY short (abbreviations only).
+- Default speed is 130 unless user specifies otherwise.
+- Always add 500ms duration for turn commands (left/right).
 `,
     tools: [
       {
         type: "function",
         name: "send_car_commands",
         description:
-          "Sends a sequence of commands to control the IoT car. Only call this when the user explicitly requests car control actions.",
+          "Sends compact array commands to control the IoT car. Only call when user requests car control.",
         parameters: getCarCommandsSchema(),
       },
     ],
-  },
-  {
-    type: "language-coach",
-    initialInstructions: `Greet the user warmly and ask what language they'd like to learn today. Keep it very brief and friendly.`,
-    message: `You are a helpful language coach that is capable of teaching students different phrases in their chosen language. You will 
-            provide sentences in English, followed by the same sentence in the user's chosen language.
-
-            RULES:
-            - After the student tells you their chosen language, you will then read sentences in
-            English followed by reading the same sentence in the user's chosen language. 
-            - Provide a pronunciation guide for the sentence in the user's chosen language. Place it in parentheses after the language sentence.
-            - Surround the English sentence and the language sentence with {{ and }}. Example:
-
-            {{ English: Hello, how are you? }} {{ Spanish: Hola, ¿cómo estás? (oh-lah koh-moh ehs-tahs) }}
-
-            - After you provide the English and language phrases, wait for the user to repeat it back to you. 
-              DO NOT SAY "Now you try it" or "Repeat after me". Stop speaking after you say the language phrase.
-            - The user will then repeat the sentence to you in their chosen language where you'll analyze 
-            how well they did with pronunciation, and let them know. If their pronunciation isn't good, have them repeat the same sentence
-            and analyze it again.
-            - If you don't clearly understand what the user is saying, please ask them
-            to repeat the statement.
-            - Always invoke the function call output tooling (get_language_phrases function) with the updated JSON object that matches the defined function call parameters.
-
-            EXAMPLE SENTENCES:
-
-            These are examples only. Please mix up the sentences you use and cover other useful phrases as well.
-
-            - The duck is swimming in the pond.
-            - I would like to order a coffee with milk and sugar.
-            - Where is the nearest train station?
-            `,
-    tools: [
-      // {
-      //     type: 'function',
-      //     name: 'get_language_phrases',
-      //     description: 'Converts language practice phrases and text into a JSON object based upon a JSON schema',
-      //     parameters: getLanguageJSONSchema()
-      // }
-    ],
-  },
-  {
-    type: "medical-form",
-    initialInstructions: `Greet the medical personnel warmly and ask them to provide their patient information. Keep it very brief - 1 sentence only.`,
-    message: `You are helping to edit a JSON object we'll refer to as "patientData" that represents a medical patient's personal information, symptoms, and vitals.
-            This JSON object conforms to the following schema: 
-
-            ${getMedicalJSONSchema()}
-
-            RULES:
-            - If the user says "patient", return a value of "patient" for the "tab" property.
-            - If the user says "symptom", "symptoms", or "add symptom", return a value of "symptoms" for the "tab" property.
-            - If the user says "vitals", return a value of "vitals" for the "tab" property.
-            - If the users gives the age in months, return "[number] months" for the "age" property.
-            - If the user asks says "new symptom" or "add new symptom", add a new array item to the "symptoms" array and wait for them to provide the information. 
-              Do not ask them what to provide for the symptom, only add a new symptom object into the "symptoms" array and wait for them to provide the information.
-            - If they say "past medical history" or "history of" then add the content into the "historyPastMedical" property. Add the full content that the user
-              says, not the summary of what they say.
-            - If they say "HPI" or "history of present illness", then add the content into the "historyOfPresentIllness" property. Add the full content that the user
-              mentions.
-            - If the user gives the age in years, return "[number] years" for the "age" property.      
-            - If the user says "clear form" or "clear data" or "clear patient", then clear the entire JSON object and assign default values to the properties. For string properties, 
-              assign empty strings, for numbers, assign 0. Set "gender" to empty strings: '' and ensure that all history properties are set to empty strings as well.
-            - Listen to the user and collect information from them. Do not reply to them unless they explicitly ask for your input. Just listen.
-            - Each time they provide information that can be added to the JSON object, update the JSON object, and then save it.
-            - Do not attempt to correct their mistakes.
-            - After sending the updated object, just reply OK.
-            - Send back the full updated Patient object, not just changes, unless explicitly requested otherwise.
-            - Always invoke the function call output tooling (get_json_object function) with the updated JSON object that matches the defined function call parameters.
-        `,
-    tools: [
-      {
-        type: "function",
-        name: "get_json_object",
-        description:
-          "Converts text into a JSON object based upon a JSON schema",
-        parameters: getMedicalJSONSchema(),
-      },
-    ],
-  },
-  {
-    type: "medical-question-answer",
-    initialInstructions: `Greet the medical personnel warmly and ask them what their question is. Keep it very brief - 1 sentence only.`,
-    message: `You're a medical question and answer assistant capable of answering questions about medical symptoms, conditions, and treatments.`,
   },
 ];
 
@@ -253,172 +204,39 @@ export function getSystemMessage(type: string): SystemMessage | null {
   return systemMessage || null;
 }
 
-function getMedicalJSONSchema() {
-  return {
-    type: "object",
-    properties: {
-      tab: { type: "string", enum: ["patient", "symptoms", "vitals"] },
-      information: {
-        type: "object",
-        properties: {
-          name: { type: "string" },
-          // dob: {
-          //     type: 'string',
-          //     format: 'date', // Indicates it's a date
-          //     pattern: '^\\d{4}-\\d{2}-\\d{2}$' // Enforces yyyy-MM-dd format (e.g., 2023-12-25)
-          // },
-          age: { type: "string" },
-          gender: { type: "string", enum: ["male", "female"] },
-          historyPastMedical: { type: "string" },
-          historyOfPresentIllness: { type: "string" },
-        },
-        required: ["name", "age", "gender"],
-      },
-      symptoms: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "number" },
-            description: { type: "string" },
-            duration: { type: "string" },
-            severity: { type: "number" },
-            notes: { type: "string" },
-          },
-          required: ["id", "description", "duration", "severity"],
-        },
-      },
-      vitals: {
-        type: "object",
-        properties: {
-          temperature: { type: "number" },
-          bloodPressure: { type: "string" },
-          heartRate: { type: "number" },
-        },
-        required: ["temperature", "bloodPressure", "heartRate"],
-      },
-    },
-    required: ["tab", "information", "symptoms", "vitals"],
-  };
-}
-
-// function getLanguageJSONSchema() {
-//     return {
-//         type: 'object',
-//         properties: {
-//             messageToUser: { type: 'string' },
-//             englishPhrase: { type: 'string' },
-//             languagePhrase: { type: 'string' },
-//             pronunciation: { type: 'string' }
-//         },
-//         required: ['messageToUser', 'englishPhrase', 'languagePhrase', 'pronunciation'],
-//     }
-// }
-
+/*
+ * COMPACT COMMAND SCHEMA
+ *
+ * Commands are arrays: [msg, type, ...params]
+ *
+ * Type codes: 1=move, 2=led, 3=beep, 4=play
+ *
+ * Move (type=1): [msg, 1, action, speed, duration?]
+ *   Actions: 0=stop, 1=forward, 2=backward, 3=left, 4=right, 5=fl, 6=fr, 7=bl, 8=br
+ *
+ * LED (type=2): [msg, 2, led_num, on_off]
+ *
+ * Beep (type=3): [msg, 3, on_off, duration?]
+ *
+ * Play (type=4): [msg, 4, song]
+ *   Songs: 0=stop, 1=pirates, 2=got, 3=squid
+ */
 function getCarCommandsSchema() {
   return {
     type: "object",
     properties: {
-      commands: {
+      c: {
         type: "array",
-        description: "Array of commands to execute in sequence",
+        description:
+          "Array of compact command arrays. Each command is an array: [msg, type, ...params]. msg is a short string abbreviation, type is 1=move/2=led/3=beep/4=play, followed by numeric parameters.",
         items: {
-          oneOf: [
-            {
-              type: "object",
-              title: "MoveCommand",
-              properties: {
-                type: { type: "string", enum: ["move"] },
-                action: {
-                  type: "string",
-                  enum: [
-                    "forward",
-                    "backward",
-                    "left",
-                    "right",
-                    "forward_left",
-                    "forward_right",
-                    "backward_left",
-                    "backward_right",
-                    "stop",
-                  ],
-                  description:
-                    "Direction to move (including diagonals) or stop",
-                },
-                speed: {
-                  type: "number",
-                  minimum: 130,
-                  maximum: 180,
-                  description:
-                    "Motor speed: 130 (low/default), 180 (medium). NEVER use speeds above 180 for safety.",
-                },
-                duration: {
-                  type: "number",
-                  description:
-                    "Duration in milliseconds. If omitted, runs until stop command",
-                },
-              },
-              required: ["type", "action"],
-            },
-            {
-              type: "object",
-              title: "BeepCommand",
-              properties: {
-                type: { type: "string", enum: ["beep"] },
-                action: {
-                  type: "string",
-                  enum: ["on", "off"],
-                  description: "Turn beeper on or off",
-                },
-                duration: {
-                  type: "number",
-                  description:
-                    "Duration in milliseconds. If omitted with 'on', stays on until 'off' command",
-                },
-              },
-              required: ["type", "action"],
-            },
-            {
-              type: "object",
-              title: "LedCommand",
-              properties: {
-                type: { type: "string", enum: ["led"] },
-                led: {
-                  type: "number",
-                  enum: [1, 2],
-                  description: "Which LED to control (1 or 2)",
-                },
-                action: {
-                  type: "string",
-                  enum: ["on", "off"],
-                  description: "Turn LED on or off",
-                },
-              },
-              required: ["type", "led", "action"],
-            },
-            {
-              type: "object",
-              title: "PlayCommand",
-              properties: {
-                type: { type: "string", enum: ["play"] },
-                action: {
-                  type: "string",
-                  enum: ["pirates", "got", "squid", "stop"],
-                  description:
-                    "Play a melody: 'pirates' for Pirates of the Caribbean, 'got' for Game of Thrones, 'squid' for Squid Game, 'stop' to stop the melody",
-                },
-              },
-              required: ["type", "action"],
-            },
-          ],
+          type: "array",
+          description:
+            "Command array: [msg, type, ...params]. First element is string message, rest are integers.",
+          items: {},
         },
       },
-      message: {
-        type: "string",
-        description:
-          "A brief message IN ENGLISH to speak to the user about what the car is doing",
-      },
     },
-    required: ["commands", "message"],
+    required: ["c"],
   };
 }

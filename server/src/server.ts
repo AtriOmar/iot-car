@@ -4,7 +4,7 @@ import http from "http";
 import { pino } from "pino";
 import { RTSession } from "./session.js";
 import { getSystemMessage } from "./systemMessages.js";
-import { CarCommand, CarControlMessage } from "./types.js";
+import { CarControlMessage, CompactCommand } from "./types.js";
 
 const PORT = process.env.PORT || 8080;
 
@@ -20,11 +20,21 @@ const wss = new WebSocketServer({ noServer: true });
 // Store for ESP32 car connections
 const carConnections = new Map<string, WebSocket>();
 
-// Function to broadcast commands to all connected cars
-export function broadcastToCarDevices(commands: CarCommand[]) {
+/*
+ * COMPACT COMMAND PROTOCOL
+ *
+ * Commands are arrays: [msg, type, ...params]
+ * Type codes: 1=move, 2=led, 3=beep, 4=play
+ *
+ * Move actions: 0=stop, 1=forward, 2=backward, 3=left, 4=right, 5=fl, 6=fr, 7=bl, 8=br
+ * Songs: 0=stop, 1=pirates, 2=got, 3=squid
+ */
+
+// Function to broadcast compact commands to all connected cars
+export function broadcastCompactCommands(compactCommands: CompactCommand[]) {
   const message: CarControlMessage = {
     type: "car_control",
-    commands: commands,
+    c: compactCommands,
   };
   const messageStr = JSON.stringify(message);
 
@@ -110,7 +120,15 @@ wss.on("connection", (ws: WebSocket) => {
 
           // Handle direct car control from frontend (bypass AI)
           if (parsedMessage.type === "car_direct_control") {
-            const sentCount = broadcastToCarDevices(parsedMessage.commands);
+            logger.info(
+              { commands: parsedMessage.c },
+              "🎮 Received direct car control from frontend",
+            );
+            const sentCount = broadcastCompactCommands(parsedMessage.c);
+            logger.info(
+              { sentCount },
+              "🎮 Broadcast result for direct car control",
+            );
             ws.send(
               JSON.stringify({
                 type: "car_control_sent",
