@@ -26,10 +26,9 @@ const {
 
 const SESSION_CONFIG = {
   modalities: ["text", "audio"],
-  // modalities: ["text"],
   voice: "ash", // ash, coral, sage, shimmer, verse, alloy
   input_audio_format: "pcm16",
-  input_audio_transcription: { model: "whisper-1" },
+  // input_audio_transcription: { model: "whisper-1" },
   turn_detection: {
     type: "server_vad",
     threshold: parseFloat(process.env.VAD_THRESHOLD || "0.6"),
@@ -76,9 +75,9 @@ export class RTSession {
 
   private audioBufferQueue: Buffer[] = [];
   private audioBufferTimer: NodeJS.Timeout | null = null;
-  private readonly BATCH_INTERVAL_MS = 200;
-  private readonly MAX_BUFFER_SIZE = 65536; // 64KB or 32768; // 32KB
-  private readonly MAX_QUEUE_SIZE = 10;
+  private readonly BATCH_INTERVAL_MS = 100;
+  private readonly MAX_BUFFER_SIZE = 32000; // 32 KB
+  private readonly MAX_QUEUE_SIZE = 6;
   private currentBufferSize = 0;
   private audioMetrics: AudioMetrics = {
     totalBytesSent: 0,
@@ -290,6 +289,10 @@ export class RTSession {
   private handleRealtimeMessage(data: RawData) {
     try {
       const event = JSON.parse(data.toString());
+
+      console.log("-------------------- event --------------------");
+
+      console.log(event);
 
       // Direct mapping of event types to handler functions using an object literal
       const handlerMap: Record<string, (event: any) => void> = {
@@ -771,8 +774,9 @@ export class RTSession {
                 type: "function_call_output",
                 call_id: call_id,
                 output: JSON.stringify({
-                  success: sentCount > 0,
-                  devices_reached: sentCount,
+                  // success: sentCount > 0,
+                  // devices_reached: sentCount,
+                  success: true,
                 }),
               },
             }),

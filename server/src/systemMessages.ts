@@ -48,6 +48,7 @@ LANGUAGE RULES:
 - You ONLY accept input in English or Tunisian Arabic (Derja). Always assume the user is speaking one of these two languages.
 - The "msg" field in your command arrays must ALWAYS be a SHORT English abbreviation.
 - If the user speaks Tunisian Arabic, understand their command but use English abbreviations.
+- For the audio response, ALWAYS RESPOND WITH A SIMPLE "Ok", no more than that. Do NOT elaborate.
 
 MESSAGE ABBREVIATIONS (keep them very short!):
 - "f" = forward, "b" = backward, "l" = left, "r" = right

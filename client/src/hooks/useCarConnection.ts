@@ -74,6 +74,9 @@ export function useCarConnection() {
 
   // Handle incoming messages
   const handleMessage = useCallback((message: any) => {
+    console.log("-------------------- message --------------------");
+    console.log(message);
+
     switch (message.type) {
       case "control":
         if (message.action === "session_created") {
