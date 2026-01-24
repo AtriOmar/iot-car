@@ -113,6 +113,7 @@ const int CMD_MOVE = 1;
 const int CMD_LED = 2;
 const int CMD_BEEP = 3;
 const int CMD_PLAY = 4;
+const int CMD_DANCE = 5;
 
 // Move action codes
 const int ACT_STOP = 0;
@@ -130,6 +131,18 @@ const int PLAY_STOP = 0;
 const int PLAY_PIRATES = 1;
 const int PLAY_GOT = 2;
 const int PLAY_SQUID = 3;
+
+// Dance codes (with approximate durations in ms)
+// 1 = spin (3 seconds)
+// 2 = zigzag (4 seconds)
+// 3 = disco (5 seconds)
+// 4 = crazy (6 seconds)
+// 5 = celebration (8 seconds)
+const int DANCE_SPIN = 1;        // ~3000ms
+const int DANCE_ZIGZAG = 2;      // ~4000ms
+const int DANCE_DISCO = 3;       // ~5000ms
+const int DANCE_CRAZY = 4;       // ~6000ms
+const int DANCE_CELEBRATION = 5; // ~8000ms
 
 const int MAX_QUEUE_SIZE = 20;
 QueuedCommand commandQueue[MAX_QUEUE_SIZE];
@@ -162,6 +175,7 @@ void setBeeper(bool state);
 void enqueueCommand(QueuedCommand cmd);
 bool dequeueCommand(QueuedCommand &cmd);
 void playSong(const char *songName);
+void executeDance(int danceId);
 
 // ==================== SETUP ====================
 void setup()
@@ -467,6 +481,12 @@ void processMessage(const char *payload)
         Serial.printf("  Queued PLAY: song=%d\n", qCmd.action);
         break;
 
+      case CMD_DANCE:
+        // [msg, 5, dance_id]
+        qCmd.action = cmd[2].as<int>(); // 1=spin, 2=zigzag, 3=disco, 4=crazy, 5=celebration
+        Serial.printf("  Queued DANCE: id=%d\n", qCmd.action);
+        break;
+
       default:
         Serial.printf("  Unknown command type: %d\n", cmdType);
         continue;
@@ -619,6 +639,12 @@ void processCommandQueue()
         break;
       }
       // Continue to next command (melody plays in background)
+      break;
+
+    case CMD_DANCE:
+      // Execute a predefined dance routine
+      executeDance(cmd.action);
+      // Dance blocks until complete
       break;
     }
   }
@@ -832,4 +858,201 @@ void playSong(const char *songName)
   {
     Serial.printf("Unknown song: %s\n", songName);
   }
+}
+
+// ==================== DANCE ROUTINES ====================
+// Each dance has a predefined duration:
+// 1 = spin (~3s), 2 = zigzag (~4s), 3 = disco (~5s), 4 = crazy (~6s), 5 = celebration (~8s)
+
+void executeDance(int danceId)
+{
+  Serial.printf("Executing dance: %d\n", danceId);
+
+  // Stop any current movement
+  stopMotors();
+  commandState.moveActive = false;
+  commandState.moveEndTime = 0;
+
+  switch (danceId)
+  {
+  case DANCE_SPIN: // ~3 seconds - Quick spin dance
+    Serial.println("Dance: SPIN (3s)");
+    setLED(1, true);
+    setLED(2, true);
+    // Spin right
+    turnRight(160);
+    delay(1000);
+    // Spin left
+    turnLeft(160);
+    delay(1000);
+    // Spin right again
+    turnRight(180);
+    delay(800);
+    // Stop and flash
+    stopMotors();
+    setLED(1, false);
+    delay(100);
+    setLED(1, true);
+    delay(100);
+    setLED(2, false);
+    stopMotors();
+    setLED(1, false);
+    setLED(2, false);
+    break;
+
+  case DANCE_ZIGZAG: // ~4 seconds - Zigzag pattern
+    Serial.println("Dance: ZIGZAG (4s)");
+    setLED(1, true);
+    // Forward-right
+    moveForwardRight(150);
+    delay(600);
+    // Forward-left
+    moveForwardLeft(150);
+    delay(600);
+    setLED(2, true);
+    setLED(1, false);
+    // Forward-right
+    moveForwardRight(150);
+    delay(600);
+    // Forward-left
+    moveForwardLeft(150);
+    delay(600);
+    // Backward
+    moveBackward(140);
+    delay(600);
+    // Beep
+    setBeeper(true);
+    delay(200);
+    setBeeper(false);
+    // Stop
+    stopMotors();
+    setLED(1, false);
+    setLED(2, false);
+    break;
+
+  case DANCE_DISCO: // ~5 seconds - Disco with lights and beeps
+    Serial.println("Dance: DISCO (5s)");
+    for (int i = 0; i < 5; i++)
+    {
+      setLED(1, i % 2 == 0);
+      setLED(2, i % 2 == 1);
+      if (i % 2 == 0)
+      {
+        turnRight(150);
+      }
+      else
+      {
+        turnLeft(150);
+      }
+      delay(400);
+      setBeeper(true);
+      delay(100);
+      setBeeper(false);
+      delay(400);
+    }
+    stopMotors();
+    setLED(1, false);
+    setLED(2, false);
+    break;
+
+  case DANCE_CRAZY: // ~6 seconds - Crazy random movements
+    Serial.println("Dance: CRAZY (6s)");
+    setLED(1, true);
+    setLED(2, true);
+    // Quick movements
+    moveForward(170);
+    delay(400);
+    turnRight(180);
+    delay(500);
+    moveBackward(160);
+    delay(400);
+    setBeeper(true);
+    delay(150);
+    setBeeper(false);
+    turnLeft(180);
+    delay(600);
+    moveForwardRight(150);
+    delay(500);
+    moveBackwardLeft(150);
+    delay(500);
+    setBeeper(true);
+    delay(150);
+    setBeeper(false);
+    turnRight(170);
+    delay(700);
+    // Spin finish
+    turnLeft(180);
+    delay(1000);
+    setBeeper(true);
+    delay(200);
+    setBeeper(false);
+    stopMotors();
+    setLED(1, false);
+    setLED(2, false);
+    break;
+
+  case DANCE_CELEBRATION: // ~8 seconds - Victory celebration
+    Serial.println("Dance: CELEBRATION (8s)");
+    // Opening spin
+    setLED(1, true);
+    turnRight(160);
+    delay(800);
+    setLED(2, true);
+    turnLeft(160);
+    delay(800);
+    // Forward backward
+    setLED(1, false);
+    moveForward(150);
+    delay(500);
+    moveBackward(150);
+    delay(500);
+    setLED(1, true);
+    setLED(2, false);
+    // Zigzag
+    moveForwardLeft(140);
+    delay(400);
+    moveForwardRight(140);
+    delay(400);
+    moveForwardLeft(140);
+    delay(400);
+    // Beep pattern
+    setBeeper(true);
+    delay(200);
+    setBeeper(false);
+    delay(100);
+    setBeeper(true);
+    delay(200);
+    setBeeper(false);
+    // Final spin
+    setLED(1, true);
+    setLED(2, true);
+    turnRight(180);
+    delay(1200);
+    turnLeft(180);
+    delay(1200);
+    // Finish
+    stopMotors();
+    for (int i = 0; i < 3; i++)
+    {
+      setLED(1, true);
+      setLED(2, false);
+      setBeeper(true);
+      delay(150);
+      setLED(1, false);
+      setLED(2, true);
+      setBeeper(false);
+      delay(150);
+    }
+    setLED(1, false);
+    setLED(2, false);
+    break;
+
+  default:
+    Serial.printf("Unknown dance: %d\n", danceId);
+    // Default to spin
+    executeDance(DANCE_SPIN);
+    break;
+  }
+
+  Serial.println("Dance complete");
 }

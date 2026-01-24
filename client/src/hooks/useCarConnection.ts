@@ -74,8 +74,6 @@ export function useCarConnection() {
 
   // Handle incoming messages
   const handleMessage = useCallback((message: any) => {
-    console.log("-------------------- message --------------------");
-    console.log(message);
     switch (message.type) {
       case "control":
         if (message.action === "session_created") {
@@ -97,20 +95,6 @@ export function useCarConnection() {
           } catch (e) {
             console.error("Failed to parse function call params:", e);
           }
-        } else if (message.action === "text_done") {
-          // Finalize text message when server signals completion
-          const finalText = currentTextRef.current.get(message.id);
-          if (finalText) {
-            setAiResponses((prev) => [
-              ...prev.slice(-9),
-              {
-                id: message.id,
-                text: finalText,
-                timestamp: new Date(),
-              },
-            ]);
-            currentTextRef.current.delete(message.id);
-          }
         } else if (message.action === "error") {
           console.error("Server error:", message.error);
         }
@@ -120,6 +104,22 @@ export function useCarConnection() {
         // Accumulate text deltas
         const currentText = currentTextRef.current.get(message.id) || "";
         currentTextRef.current.set(message.id, currentText + message.delta);
+        break;
+
+      case "text_done":
+        // Finalize text message
+        const finalText = currentTextRef.current.get(message.id);
+        if (finalText) {
+          setAiResponses((prev) => [
+            ...prev.slice(-9),
+            {
+              id: message.id,
+              text: finalText,
+              timestamp: new Date(),
+            },
+          ]);
+          currentTextRef.current.delete(message.id);
+        }
         break;
     }
   }, []);
@@ -140,7 +140,6 @@ export function useCarConnection() {
       return;
     }
 
-    console.log("🎮 Sending car command:", commands);
     socketRef.current.send(
       JSON.stringify({
         type: "car_direct_control",

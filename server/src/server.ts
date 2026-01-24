@@ -120,15 +120,7 @@ wss.on("connection", (ws: WebSocket) => {
 
           // Handle direct car control from frontend (bypass AI)
           if (parsedMessage.type === "car_direct_control") {
-            logger.info(
-              { commands: parsedMessage.c },
-              "🎮 Received direct car control from frontend",
-            );
             const sentCount = broadcastCompactCommands(parsedMessage.c);
-            logger.info(
-              { sentCount },
-              "🎮 Broadcast result for direct car control",
-            );
             ws.send(
               JSON.stringify({
                 type: "car_control_sent",
