@@ -14,6 +14,7 @@ import {
 } from "./types.js";
 import { AzureOpenAI } from "openai";
 import { broadcastCompactCommands } from "./server.js";
+import { SILENT_CHUNK_40MS } from "./constants.js";
 config({ path: "../.env" });
 
 const {
@@ -75,9 +76,9 @@ export class RTSession {
 
   private audioBufferQueue: Buffer[] = [];
   private audioBufferTimer: NodeJS.Timeout | null = null;
-  private readonly BATCH_INTERVAL_MS = 100;
+  private readonly BATCH_INTERVAL_MS = 0;
   private readonly MAX_BUFFER_SIZE = 32000; // 32 KB
-  private readonly MAX_QUEUE_SIZE = 6;
+  private readonly MAX_QUEUE_SIZE = 2;
   private currentBufferSize = 0;
   private audioMetrics: AudioMetrics = {
     totalBytesSent: 0,
@@ -477,12 +478,24 @@ export class RTSession {
 
   private handleClientMessage(data: RawData, isBinary: boolean) {
     try {
+      // Normal routing
       if (isBinary) {
         this.handleClientBinaryMessage(data);
       } else {
-        this.handleClientTextMessage(data);
+        const string = data.toString();
+
+        if (string === "_") {
+          console.log("-------------------- string --------------------");
+          console.log(string);
+          // Treat _ as binary audio representing a silent chunk
+          this.handleClientBinaryMessage(SILENT_CHUNK_40MS.buffer);
+        } else {
+          this.handleClientTextMessage(JSON.parse(string) as WSMessage);
+        }
       }
     } catch (error) {
+      console.log("-------------------- error --------------------");
+      console.log(error);
       this.logger.error({ error }, "🔥 Error handling message");
     }
   }
@@ -694,16 +707,14 @@ export class RTSession {
     }
   }
 
-  private handleClientTextMessage(data: RawData) {
-    const parsed = JSON.parse(data.toString()) as WSMessage;
-
+  private handleClientTextMessage(message: WSMessage) {
     // Ignore car_direct_control messages - handled by server.ts
-    if ((parsed as any).type === "car_direct_control") {
+    if ((message as any).type === "car_direct_control") {
       return;
     }
 
     if (
-      parsed.type === "user_message" &&
+      message.type === "user_message" &&
       this.openAIWs.readyState === WebSocket.OPEN
     ) {
       this.openAIWs.send(
@@ -712,7 +723,7 @@ export class RTSession {
           item: {
             type: "message",
             role: "user",
-            content: [{ type: "input_text", text: parsed.text }],
+            content: [{ type: "input_text", text: message.text }],
           },
         }),
       );

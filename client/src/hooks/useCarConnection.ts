@@ -186,9 +186,20 @@ export function useCarConnection() {
 
       // Handle audio data from worklet
       workletNode.port.onmessage = (event) => {
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          const int16Data = event.data as Int16Array;
-          socketRef.current.send(int16Data.buffer);
+        if (
+          !socketRef.current ||
+          socketRef.current.readyState !== WebSocket.OPEN
+        ) {
+          return;
+        }
+
+        const data = event.data;
+
+        if (data === "_") {
+          socketRef.current.send("_");
+        } else {
+          // data is ArrayBuffer
+          socketRef.current.send(data);
         }
       };
 
