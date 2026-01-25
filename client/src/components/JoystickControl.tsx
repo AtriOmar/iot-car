@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import Joystick, { Direction, DirectionCount } from "rc-joystick";
 // import "./JoystickControl.css";
 
@@ -13,11 +13,20 @@ export type JoystickDirection =
   | "backward_right"
   | "stop";
 
+export type SpeedLevel = "low" | "medium" | "fast";
+
 interface JoystickControlProps {
-  onMove: (direction: JoystickDirection) => void;
+  onMove: (direction: JoystickDirection, speed: number) => void;
   onStop: () => void;
   disabled?: boolean;
 }
+
+// Speed mappings
+const SPEED_VALUES: Record<SpeedLevel, number> = {
+  low: 130,
+  medium: 180,
+  fast: 255,
+};
 
 // Map rc-joystick Direction to our CarMoveAction
 function mapDirection(direction: Direction): JoystickDirection {
@@ -52,6 +61,7 @@ export function JoystickControl({
   const lastDirectionRef = useRef<JoystickDirection>("stop");
   const isMovingRef = useRef(false);
   const pressedKeysRef = useRef<Set<string>>(new Set());
+  const [currentSpeed, setCurrentSpeed] = useState<SpeedLevel>("low");
 
   const handleChange = useCallback(
     (event: { direction: Direction; distance: number }) => {
@@ -75,10 +85,10 @@ export function JoystickControl({
       if (mappedDirection !== lastDirectionRef.current) {
         lastDirectionRef.current = mappedDirection;
         isMovingRef.current = true;
-        onMove(mappedDirection);
+        onMove(mappedDirection, SPEED_VALUES[currentSpeed]);
       }
     },
-    [disabled, onMove, onStop],
+    [disabled, onMove, onStop, currentSpeed],
   );
 
   // Determine direction based on pressed keys
@@ -106,20 +116,25 @@ export function JoystickControl({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key;
-      const validKeys = [
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        "w",
-        "W",
-        "a",
-        "A",
-        "s",
-        "S",
-        "d",
-        "D",
-      ];
+
+      // Handle speed control keys
+      if (key === "q") {
+        e.preventDefault();
+        setCurrentSpeed("low");
+        return;
+      }
+      if (key === "s") {
+        e.preventDefault();
+        setCurrentSpeed("medium");
+        return;
+      }
+      if (key === "d") {
+        e.preventDefault();
+        setCurrentSpeed("fast");
+        return;
+      }
+
+      const validKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
 
       if (!validKeys.includes(key)) return;
 
@@ -133,26 +148,13 @@ export function JoystickControl({
       if (direction !== "stop" && direction !== lastDirectionRef.current) {
         lastDirectionRef.current = direction;
         isMovingRef.current = true;
-        onMove(direction);
+        onMove(direction, SPEED_VALUES[currentSpeed]);
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key;
-      const validKeys = [
-        "ArrowUp",
-        "ArrowDown",
-        "ArrowLeft",
-        "ArrowRight",
-        "w",
-        "W",
-        "a",
-        "A",
-        "s",
-        "S",
-        "d",
-        "D",
-      ];
+      const validKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
 
       if (!validKeys.includes(key)) return;
 
@@ -169,7 +171,7 @@ export function JoystickControl({
         }
       } else if (direction !== lastDirectionRef.current) {
         lastDirectionRef.current = direction;
-        onMove(direction);
+        onMove(direction, SPEED_VALUES[currentSpeed]);
       }
     };
 
@@ -180,19 +182,62 @@ export function JoystickControl({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [disabled, onMove, onStop, getKeyboardDirection]);
+  }, [disabled, onMove, onStop, getKeyboardDirection, currentSpeed]);
 
   return (
-    <div
-      className={`joystick-dark flex items-center ${disabled ? "opacity-50 pointer-events-none" : ""}`}
-    >
-      <Joystick
-        baseRadius={70}
-        controllerRadius={35}
-        directionCount={DirectionCount.Nine}
-        throttle={50}
-        onChange={handleChange}
-      />
+    <div className="flex flex-col items-center gap-2">
+      {/* Speed Indicator */}
+      <div className="flex gap-1 text-xs">
+        <div className="text-gray-400">Speed:</div>
+        <button
+          onClick={() => setCurrentSpeed("low")}
+          className={`px-2 py-1 rounded text-xs transition-colors ${
+            currentSpeed === "low"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+          } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          1: Low
+        </button>
+        <button
+          onClick={() => setCurrentSpeed("medium")}
+          className={`px-2 py-1 rounded text-xs transition-colors ${
+            currentSpeed === "medium"
+              ? "bg-yellow-500 text-white"
+              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+          } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          2: Medium
+        </button>
+        <button
+          onClick={() => setCurrentSpeed("fast")}
+          className={`px-2 py-1 rounded text-xs transition-colors ${
+            currentSpeed === "fast"
+              ? "bg-red-500 text-white"
+              : "bg-gray-600 text-gray-300 hover:bg-gray-500"
+          } ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          3: Fast
+        </button>
+      </div>
+
+      {/* Joystick */}
+      <div
+        className={`joystick-dark flex items-center ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+      >
+        <Joystick
+          baseRadius={70}
+          controllerRadius={35}
+          directionCount={DirectionCount.Nine}
+          throttle={50}
+          onChange={handleChange}
+        />
+      </div>
+
+      {/* Current Speed Value */}
+      <div className="text-gray-400 text-xs">
+        Speed: {SPEED_VALUES[currentSpeed]}
+      </div>
     </div>
   );
 }

@@ -60,14 +60,14 @@ export function CarController() {
 
   // Handle joystick movement - compact format: [msg, 1, action, speed]
   const handleJoystickMove = useCallback(
-    (direction: JoystickDirection) => {
+    (direction: JoystickDirection, speed: number) => {
       const action = DIRECTION_TO_ACTION[direction];
       const msg = direction.charAt(0); // Short message: f, b, l, r, etc.
       const command: CompactCommand = [
         msg,
         CMD_MOVE,
         action,
-        currentSpeedRef.current,
+        speed, // Use the speed from the joystick instead of currentSpeedRef
       ];
       sendCarCommand([command]);
     },
